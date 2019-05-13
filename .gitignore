@@ -1,0 +1,13 @@
+.idea
+project/project
+project/target
+target
+test_invoice.pdf
+node_modules
+package-lock.json
+.DS_Store
+src/main/resources/application.conf
+.\\log/
+log/
+temp
+temp/

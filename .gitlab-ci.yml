@@ -1,0 +1,95 @@
+variables:
+  ARTIFACT_NAME: 'market-service-1.0'
+
+stages:
+- build
+# - test
+- deploy
+
+.deploy_script:
+  script: &deploy_script
+  - docker login -u $REG_USER -p $REG_PASSWORD $REG_SERVER
+  - docker build -t $IMAGE_TAG .
+  - docker push $IMAGE_TAG
+  - envsubst < kube.yaml | kubectl --context=$CONTEXT apply -f -
+
+build:
+  stage: build
+  artifacts:
+    name: "${CI_PROJECT_NAME}_${CI_BUILD_ID}_${CI_COMMIT_SHA}"
+    expire_in: 1 day
+    paths:
+    - target/universal/$ARTIFACT_NAME.tgz
+  script:
+  - sbt dist
+  - sbt universal:packageZipTarball
+  cache:
+    paths:
+    - target/
+  only:
+  - beta
+  - master
+  tags:
+  - azure
+
+beta_deploy:
+  stage: deploy
+  retry: 2
+  script: *deploy_script
+  variables:
+    IMAGE_TAG: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_NAME:$CI_COMMIT_SHA
+    LOCAL_IMAGE_TAG: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_NAME:$CI_COMMIT_SHA
+    REG_USER: gitlab-ci-token
+    REG_PASSWORD: $CI_JOB_TOKEN
+    REG_SERVER: $CI_REGISTRY
+    imagePullSecrets: regsecret
+    CONTEXT: local
+    REPLICAS: 1
+  environment:
+    name: beta
+#    url: https://www.snapptrip.com
+  only:
+  - beta
+
+pars_prod:
+  stage: deploy
+  retry: 2
+  script: *deploy_script
+  variables:
+    REG_USER: $REGISTRY_USER
+    REG_PASSWORD: $REGISTRY_PASSWORD
+    REG_SERVER: $REGISTRY_SERVER
+    IMAGE_TAG: $REGISTRY_SERVER/$CI_PROJECT_PATH/$CI_COMMIT_REF_NAME:$CI_COMMIT_SHA
+    LOCAL_IMAGE_TAG: $REGISTRY_SERVER/$CI_PROJECT_PATH/$CI_COMMIT_REF_NAME:$CI_COMMIT_SHA
+    imagePullSecrets: production-registry
+    CONTEXT: pars
+    REPLICAS: 2
+  environment:
+    name: pars_prod
+#    url: http://www.snapptrip.com
+  only:
+  - master
+
+
+shatel_prod:
+  stage: deploy
+  retry: 2
+  script: *deploy_script
+  variables:
+    REG_USER: $REGISTRY_USER
+    REG_PASSWORD: $REGISTRY_PASSWORD
+    REG_SERVER: $REGISTRY_SERVER
+    IMAGE_TAG: $REGISTRY_SERVER/$CI_PROJECT_PATH/$CI_COMMIT_REF_NAME:$CI_COMMIT_SHA
+    LOCAL_IMAGE_TAG: localhost/$CI_PROJECT_PATH/$CI_COMMIT_REF_NAME:$CI_COMMIT_SHA
+    imagePullSecrets: production-registry
+    CONTEXT: shatel
+    REPLICAS: 2
+  environment:
+    name: shatel_prod
+#    url: http://www.snapptrip.com
+  only:
+  - master
+  tags:
+  - azure
+
+
