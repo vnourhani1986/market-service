@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "market-service.fullname" . }}
+  labels:
+    app: {{ template "market-service.fullname" . }}
+    chart: {{ template "market-service.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    metrics: "true"
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: app
+      protocol: TCP
+      name: app
+  selector:
+    app: {{ template "market-service.fullname" . }}
+    release: {{ .Release.Name }}
+

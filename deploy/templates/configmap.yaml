@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "market-service.fullname" . }}
+data:
+  config.conf: |-
+    include "{{ .Values.baseConfig }}.conf"
+{{ .Values.extraConfig | replace " " "\n" | indent 4 }}

@@ -1,0 +1,52 @@
+{{ $release_name := splitList "-" .Release.Name }}
+{{ $review := index $release_name 0 }}
+
+{{- if .Values.ingress.enabled -}}
+{{- $fullName := include "market-service.fullname" . -}}
+{{- $ingressPath := .Values.ingress.path -}}
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: {{ $fullName }}
+  labels:
+    app: {{ template "market-service.fullname" . }}
+    chart: {{ template "market-service.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+  annotations:
+    kubernetes.io/ingress.class: {{ .Values.ingressClass }} 
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    nginx.ingress.kubernetes.io/from-to-www-redirect: "true"     
+{{- with .Values.ingress.annotations }}    
+{{ toYaml . | indent 4 }}
+{{- end }}
+spec:
+{{- if .Values.ingress.tls }}
+  tls:
+  {{- range .Values.ingress.tls }}
+    - hosts:
+      {{- range .hosts }}
+        {{ if (or (eq $review "beta") (eq $review "master")) }}
+        - {{ . }}
+        {{- else }}
+        - {{ $review }}.{{ . }}
+        {{- end }}
+      {{- end }}
+      secretName: {{ .secretName }}
+  {{- end }}
+{{- end }}
+  rules:
+  {{- range .Values.ingress.hosts }}
+    {{ if (or (eq $review "beta") (eq $review "master")) }}
+    - host: {{ . }}
+    {{- else }}
+    - host: {{ $review }}.{{ . }}
+    {{- end }}
+      http:
+        paths:
+          - path: {{ $ingressPath }}
+            backend:
+              serviceName: {{ $fullName }}
+              servicePort: app
+  {{- end }}
+{{- end }}

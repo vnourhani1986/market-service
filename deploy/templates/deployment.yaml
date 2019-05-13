@@ -1,0 +1,86 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: {{ template "market-service.fullname" . }}
+  labels:
+    app: {{ template "market-service.fullname" . }}
+    chart: {{ template "market-service.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: {{ template "market-service.fullname" . }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      labels:
+        app: {{ template "market-service.fullname" . }}
+        release: {{ .Release.Name }}
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - {{ template "market-service.fullname" . }}
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+      imagePullSecrets:
+        - name: "{{ .Values.imagePullSecrets }}"
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image }}"
+        imagePullPolicy: IfNotPresent
+        command: ["bin/market-service"]
+        args: [
+            "-J-Xms265m",
+            "-J-Xmx512m",
+            "-J-server",
+            "-Dplay.http.secret.key=abcdefghijk",
+            "-Dhttp.port=9000",
+            "-Dconfig.file=/pintapin/config/config.conf",
+            "-Dpidfile.path=/dev/null",
+            "-DSENTRY_DSN=http://c60e353053ed495b84f38a1663e302b7:cc1482e446594697a9ea63fb6f0dcc1a@sentry.snapptrip.com/5",
+          ]
+        ports:
+        - name: app
+          containerPort: 9000
+        resources:
+          requests:
+            memory: 265Mi
+        volumeMounts:
+            - name: nfs
+              mountPath: "/pintapin/share"
+            - name: config
+              mountPath: "/pintapin/config"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: app
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: app
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 3
+      volumes:
+      - name: config
+        configMap:
+          name: "{{ template "market-service.fullname" . }}"
+      - name: nfs
+        persistentVolumeClaim:
+          claimName: nfs
+
+

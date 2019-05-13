@@ -1,0 +1,32 @@
+replicas: 1
+namespace: b2c 
+context: local
+imagePullSecrets: regsecret
+image: git.pinsvc.net:4567/b2c/market-service/beta
+baseConfig: beta
+ingressClass: b2c-local
+extraConfig: ""
+
+service:
+  type: ClusterIP
+  port: 9000
+
+ingress:
+  enabled: true
+  path: /service2/market/?(.*)
+  hosts:
+    - b2c.ptp
+    - www.pintapin.com
+    - www.snapptrip.com
+    - beta.pintapin.com
+    - hotelview.b2c.ptp
+    - hotelview.snapptrip.com
+    - ap.pinsvc.net
+  tls:
+    - secretName: www-pintapin-com-ssl
+      hosts:
+        - www.pintapin.com
+    - secretName: snapptrip-com-ssl
+      hosts:
+        - www.snapptrip.com
+        - hotelview.snapptrip.com
