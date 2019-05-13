@@ -7,6 +7,11 @@ import scala.concurrent.duration._
 
 object NotificationConfig {
   val host: String = config.getString("notification.host")
-  val baseURL: String = config.getString("notification.api-base-url")
-  val clientConnectionSettings: ClientConnectionSettings = ClientConnectionSettings(system).withConnectingTimeout(30.second)
+  private val baseURL: String = config.getString("notification.api-base-url")
+  private val sms: String = config.getString("notification.sms-url")
+  private val email: String = config.getString("notification.email-url")
+  val emailUrl = s"""$baseURL$email"""
+  val smsUrl = s"""$baseURL$sms"""
+  val client: String = config.getString("notification.client")
+  val clientConnectionSettings: ClientConnectionSettings = ClientConnectionSettings(system).withConnectingTimeout(15.second)
 }
