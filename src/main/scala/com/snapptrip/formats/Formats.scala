@@ -29,7 +29,7 @@ trait FormatsComponent extends JsonProtocol {
   implicit val httpErrorFormat = jsonFormat3(HttpError)
   implicit val metaDataFormat = jsonFormat9(MetaData)
   implicit val smsDataFormat = jsonFormat3(SMSData)
-  implicit val wmetaDataFormat = jsonFormat3(WMetaData)
+  implicit val wMetaDataFormat = jsonFormat3(WMetaData)
   implicit val webEngageSMSBodyFormat = jsonFormat3(WebEngageSMSBody)
   implicit val nameEmailFormat = jsonFormat2(NameEmail)
   implicit val nameUrlFormat = jsonFormat2(NameUrl)

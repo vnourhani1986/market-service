@@ -29,7 +29,7 @@ object Messages {
 
   case class ServerError(message: String)
 
-  // web engage sms provider
+  // web engage notification provider -> (SSP, SEP)
   case class SMSData(toNumber: String, fromNumber: String, body: String)
   case class WMetaData(campaignType: String, timestamp: String, messageId: String)
   case class WebEngageSMSBody(version: String, smsData: SMSData, metadata: WMetaData)
@@ -38,7 +38,6 @@ object Messages {
   case class Recipients(to: List[NameEmail], cc: List[String], bcc: List[String])
   case class Email(from: String, fromName: String, replyTo: List[String], subject: String, text: String, html: String,
                    recipients: Recipients, attachments: List[NameUrl])
-  case class WebEngageEmailBody(email: Email, metaData: WMetaData, version: String)
-
+  case class WebEngageEmailBody(email: Email, metadata: WMetaData, version: String)
 
 }

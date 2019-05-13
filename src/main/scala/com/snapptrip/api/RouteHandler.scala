@@ -15,7 +15,7 @@ import com.snapptrip.notification.sms.SmsService
 import com.snapptrip.repos.{BusinessRepoImpl, UsersRepoImpl}
 import com.snapptrip.services.WebEngage
 import com.typesafe.scalalogging.LazyLogging
-import spray.json.{JsNumber, JsObject, JsString, JsValue}
+import spray.json.{JsNumber, JsObject, JsString, JsValue, JsonParser}
 
 import scala.concurrent.ExecutionContextExecutor
 
@@ -195,7 +195,6 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
                     "statusCode" -> JsNumber(1000), // unknown error
                     "message" -> JsString("NA")
                   ).toString
-                  println(entity)
                   val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
                   complete(HttpResponse(status = status).withEntity(httpEntity))
                 case status if status == StatusCodes.InternalServerError =>
@@ -225,4 +224,3 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
 
 
 }
-
