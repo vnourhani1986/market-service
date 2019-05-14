@@ -45,6 +45,6 @@ ingress:
             proxy_set_header X-Referer $http_referer;
             proxy_set_header X-Scheme $scheme;
             #rewrite /service2/auth(.*) /$1  break;
-            proxy_pass http://ingress-nginx.core:80;
+            proxy_pass http://ingress-nginx.b2c:31080;
         }
      
