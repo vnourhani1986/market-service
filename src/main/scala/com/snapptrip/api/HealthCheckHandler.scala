@@ -23,7 +23,7 @@ object HealthCheckHandler {
     val remoteAddress = ctx.request.headers.find(h => "Remote-Address".equalsIgnoreCase(h.name)).getOrElse(new RawHeader("Remote-Address", "127.0.0.1")).value()
 
     db.run(sql"""SELECT 1""".as[Boolean]) flatMap { _ =>
-      val h = HealthCheckResponse("success", "This is from a healthy flight admin app :D", remoteAddress, "successfully ran a `select 1` query")
+      val h = HealthCheckResponse("success", "This is from a healthy market service app :D", remoteAddress, "successfully ran a `select 1` query")
       ctx.complete(h)
     } recoverWith {
       case error: Throwable => ctx.fail(error)
