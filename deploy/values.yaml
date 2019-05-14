@@ -24,4 +24,3 @@ ingress:
     - secretName: snapptrip-com-ssl
       hosts:
         - www.snapptrip.com
-
