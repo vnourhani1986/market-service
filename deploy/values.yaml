@@ -16,12 +16,7 @@ ingress:
   path: /service2/market/?(.*)
   hosts:
     - b2c.ptp
-    - www.pintapin.com
     - www.snapptrip.com
-    - beta.pintapin.com
-    - hotelview.b2c.ptp
-    - hotelview.snapptrip.com
-    - ap.pinsvc.net
   tls:
     - secretName: www-pintapin-com-ssl
       hosts:
@@ -29,4 +24,4 @@ ingress:
     - secretName: snapptrip-com-ssl
       hosts:
         - www.snapptrip.com
-        - hotelview.snapptrip.com
+

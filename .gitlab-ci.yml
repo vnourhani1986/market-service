@@ -1,12 +1,10 @@
 stages:
   - build
   - deploy
-  - test
 
 .build_script:
   script: &build_script
-    - bash ./bin/activator dist
-    - bash ./bin/activator universal:packageZipTarball
+    - sbt universal:packageZipTarball
     - docker login -u $REG_USER -p $REG_PASSWORD $REG_SERVER
     - docker build -t $IMAGE_TAG:$CI_COMMIT_SHA .
     - docker push $IMAGE_TAG:$CI_COMMIT_SHA
@@ -16,40 +14,39 @@ stages:
 .deploy_script:
   script: &deploy_script
     - >
-        helm template 
+        helm template
         --kube-context $CONTEXT
         --namespace $CI_PROJECT_NAMESPACE
-        --set replicas=$REPLICAS 
-        --set baseConfig=$CI_COMMIT_REF_NAME 
-        --set imagePullSecrets=$imagePullSecrets 
+        --set replicas=$REPLICAS
+        --set baseConfig=$CI_COMMIT_REF_NAME
+        --set imagePullSecrets=$imagePullSecrets
         --set image=localhost/$CI_PROJECT_PATH/$CI_COMMIT_REF_NAME:$CI_COMMIT_SHA
-        --set ingressClass="$CI_PROJECT_NAMESPACE-$CONTEXT" 
+        --set ingressClass="$CI_PROJECT_NAMESPACE-$CONTEXT"
         deploy
     - >
-        helm upgrade 
+        helm upgrade
         --kube-context $CONTEXT
-        --namespace $CI_PROJECT_NAMESPACE 
-        --set replicas=$REPLICAS 
-        --set baseConfig=$CI_COMMIT_REF_NAME 
-        --set imagePullSecrets=$imagePullSecrets 
+        --namespace $CI_PROJECT_NAMESPACE
+        --set replicas=$REPLICAS
+        --set baseConfig=$CI_COMMIT_REF_NAME
+        --set imagePullSecrets=$imagePullSecrets
         --set image=localhost/$CI_PROJECT_PATH/$CI_COMMIT_REF_NAME:$CI_COMMIT_SHA
-        --set ingressClass="$CI_PROJECT_NAMESPACE-$CONTEXT" 
-        --recreate-pods 
-        --force 
-        --install 
-        $CI_COMMIT_REF_NAME-$CI_PROJECT_NAME 
+        --set ingressClass="$CI_PROJECT_NAMESPACE-$CONTEXT"
+        --recreate-pods
+        --force
+        --install
+        $CI_COMMIT_REF_NAME-$CI_PROJECT_NAME
         deploy
-
 
 build_beta:
     stage: build
     retry: 2
-    script: *build_script    
+    script: *build_script
     variables:
-        IMAGE_TAG: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_NAME     
+        IMAGE_TAG: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_NAME
         REG_USER: gitlab-ci-token
         REG_PASSWORD: $CI_JOB_TOKEN
-        REG_SERVER: $CI_REGISTRY   
+        REG_SERVER: $CI_REGISTRY
     only:
        - beta
        - /review-.+$/
@@ -59,9 +56,9 @@ build_beta:
 build_master:
     stage: build
     retry: 2
-    script: *build_script    
+    script: *build_script
     variables:
-        IMAGE_TAG: $REGISTRY_SERVER/$CI_PROJECT_PATH/$CI_COMMIT_REF_NAME    
+        IMAGE_TAG: $REGISTRY_SERVER/$CI_PROJECT_PATH/$CI_COMMIT_REF_NAME
         REG_USER: $REGISTRY_USER
         REG_PASSWORD: $REGISTRY_PASSWORD
         REG_SERVER: $REGISTRY_SERVER
@@ -77,7 +74,7 @@ deploy_beta:
     retry: 2
     script: *deploy_script
     variables:
-        imagePullSecrets: regsecret        
+        imagePullSecrets: regsecret
         CONTEXT: local
         REPLICAS: 1
     environment:
@@ -91,7 +88,7 @@ deploy_master_pars:
     retry: 2
     script: *deploy_script
     variables:
-        imagePullSecrets: production-registry       
+        imagePullSecrets: production-registry
         CONTEXT: pars
         REPLICAS: 2
     environment:
@@ -107,7 +104,7 @@ deploy_master_shatel:
     retry: 2
     script: *deploy_script
     variables:
-        imagePullSecrets: production-registry  
+        imagePullSecrets: production-registry
         CONTEXT: shatel
         REPLICAS: 2
     environment:
@@ -115,9 +112,6 @@ deploy_master_shatel:
         url: http://pintapin.com
     only:
         - master
-    when: manual
-    
-
 
 deploy_staging:
     stage: deploy
