@@ -63,7 +63,7 @@ spec:
               mountPath: "/pintapin/config"
         livenessProbe:
           httpGet:
-            path: /
+            path: /health
             port: app
           initialDelaySeconds: 15
           periodSeconds: 10
