@@ -24,7 +24,6 @@ ingress:
     - secretName: snapptrip-com-ssl
       hosts:
         - www.snapptrip.com
-        - hotelview.snapptrip.com
   annotations: 
     nginx.ingress.kubernetes.io/configuration-snippet: |
         proxy_set_header Accept-Language fa;
