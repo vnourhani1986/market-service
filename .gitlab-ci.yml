@@ -51,7 +51,7 @@ build_beta:
        - beta
        - /review-.+$/
     tags:
-        - azure   
+        - azure
 
 build_master:
     stage: build
@@ -65,8 +65,8 @@ build_master:
     only:
        - master
     tags:
-        - azure   
-  
+        - azure
+
 
 
 deploy_beta:
@@ -96,7 +96,7 @@ deploy_master_pars:
         url: http://snapptrip.com
     only:
         - master
-       
+
     when: manual
 
 deploy_master_shatel:
@@ -144,15 +144,4 @@ deploy_staging:
             deploy
     only:
        - /review-.+$/
-
-
-
-test:
-  stage: test
-  script:
-    - "curl -X POST -F token=9edbea4479068c2559685b570f98f4 -F ref=master https://git.pinsvc.net/api/v4/projects/99/trigger/pipeline"
-  only:
-    - /review-.+$/
-    - master
-    - beta
 
