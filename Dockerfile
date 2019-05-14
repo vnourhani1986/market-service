@@ -9,7 +9,6 @@ RUN echo 'Asia/Tehran' > /etc/timezone
 EXPOSE 9000
 
 MAINTAINER Vahid Nourhani
-RUN mkdir -p /pintapin/backend/market-service
 
 ADD target/universal/market-service-1.0.tgz /pintapin/backend/market-service
 

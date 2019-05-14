@@ -39,7 +39,7 @@ spec:
       - name: {{ .Chart.Name }}
         image: "{{ .Values.image }}"
         imagePullPolicy: IfNotPresent
-        command: ["bin/market-service"]
+        command: ["market-service-1.0/bin/market-service"]
         args: [
             "-J-Xms265m",
             "-J-Xmx512m",
