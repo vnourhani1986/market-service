@@ -16,12 +16,7 @@ ingress:
   path: /service2/market/?(.*)
   hosts:
     - b2c.ptp
-    - www.pintapin.com
     - www.snapptrip.com
-    - beta.pintapin.com
-    - hotelview.b2c.ptp
-    - hotelview.snapptrip.com
-    - ap.pinsvc.net
   tls:
     - secretName: www-pintapin-com-ssl
       hosts:
@@ -30,3 +25,26 @@ ingress:
       hosts:
         - www.snapptrip.com
         - hotelview.snapptrip.com
+  annotations: 
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+        proxy_set_header Accept-Language fa;
+        rewrite ^/(.+)\[.+\](.+)$ $1$2 permanent;  # https://pintapin.atlassian.net/browse/SOF-624    
+        rewrite ^/hotels$ / permanent;
+        #if ($request_uri ~* ^/(.+?)\;) {
+        #    set $args '';
+        #    rewrite ^(.*)\;$ $1 permanent;
+        #}    
+
+        location ^~ /service2/market {
+            proxy_pass_header Server;
+            proxy_pass_header X-Referer;
+            proxy_pass_header lang;
+            proxy_redirect off;
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Referer $http_referer;
+            proxy_set_header X-Scheme $scheme;
+            #rewrite /service2/auth(.*) /$1  break;
+            proxy_pass http://ingress-nginx.core:80;
+        }
+     
