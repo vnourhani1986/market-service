@@ -201,7 +201,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
                   logger.info(s"""post email response by result: server error and status: $status""")
                   val entity = JsObject(
                     "status" -> JsString("ERROR"),
-                    "statusCode" -> JsNumber(9988), // unknown error
+                    "statusCode" -> JsNumber(9999), // unknown error
                     "message" -> JsString("server_error")
                   ).toString
                   val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
@@ -210,7 +210,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
                   logger.info(s"""post email response by status: $status""")
                   val entity = JsObject(
                     "status" -> JsString("ERROR"),
-                    "statusCode" -> JsNumber(9988), // unknown error
+                    "statusCode" -> JsNumber(9999), // unknown error
                     "message" -> JsString("server_error")
                   ).toString
                   complete(HttpResponse(status = status).withEntity(entity))
