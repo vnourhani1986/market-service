@@ -18,9 +18,7 @@ ingress:
     - b2c.ptp
     - www.snapptrip.com
   tls:
-    - secretName: w
-
-    ww-pintapin-com-ssl
+    - secretName: www-pintapin-com-ssl
       hosts:
         - www.pintapin.com
     - secretName: snapptrip-com-ssl
