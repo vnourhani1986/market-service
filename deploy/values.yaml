@@ -13,7 +13,7 @@ service:
 
 ingress:
   enabled: true
-  path: /service2/market/?(.*)
+  path: "/service2/market/?(.*)"
   hosts:
     - b2c.ptp
     - www.snapptrip.com
