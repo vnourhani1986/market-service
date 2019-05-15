@@ -29,4 +29,15 @@ object Messages {
 
   case class ServerError(message: String)
 
+  // web engage notification provider -> (SSP, SEP)
+  case class SMSData(toNumber: String, fromNumber: String, body: String)
+  case class WMetaData(campaignType: String, timestamp: String, messageId: String)
+  case class WebEngageSMSBody(version: String, smsData: SMSData, metadata: WMetaData)
+  case class NameEmail(name: String, email: String)
+  case class NameUrl(name: String, url: String)
+  case class Recipients(to: List[NameEmail], cc: List[String], bcc: List[String])
+  case class Email(from: String, fromName: String, replyTo: List[String], subject: String, text: String, html: String,
+                   recipients: Recipients, attachments: List[NameUrl])
+  case class WebEngageEmailBody(email: Email, metadata: WMetaData, version: String)
+
 }
