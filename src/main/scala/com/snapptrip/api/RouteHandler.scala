@@ -219,7 +219,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
             }
           }
         } ~
-        path("check" / "user") {
+        path("user" / "check") {
           post {
             entity(as[WebEngageUserInfo]) { body =>
               logger.info(s"""post check user request by body $body""")
@@ -247,6 +247,40 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
                     val entity = JsObject(
                       "status" -> JsString("ERROR"),
                       "user_id" -> JsString("-1")
+                    ).toString
+                    val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
+                    complete(HttpResponse(status = StatusCodes.InternalServerError).withEntity(httpEntity))
+                }
+              }
+            }
+          }
+        } ~
+        path("user" / "add") {
+          post {
+            entity(as[WebEngageUserInfo]) { body =>
+              logger.info(s"""post check user request by body $body""")
+              if (body.user_name.isEmpty && body.email.isEmpty && body.mobile_no.isEmpty) {
+                val status = false
+                logger.info(s"""post check user response by result: server error and status: $status""")
+                val entity = JsObject(
+                  "status" -> JsString("ERROR"),
+                  "user_id" -> JsString("-1")
+                ).toString
+                val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
+                complete(HttpResponse(status = StatusCodes.BadRequest).withEntity(httpEntity))
+              } else {
+                onSuccess(WebEngage.userCheck(body)) {
+                  case (_, status) if status =>
+                    logger.info(s"""post check user response by status: $status""")
+                    val entity = JsObject(
+                      "status" -> JsString("SUCCESS")
+                    ).toString
+                    val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
+                    complete(HttpResponse(status = StatusCodes.OK).withEntity(httpEntity))
+                  case (_, status) =>
+                    logger.info(s"""post check user response by result: server error and status: $status""")
+                    val entity = JsObject(
+                      "status" -> JsString("ERROR")
                     ).toString
                     val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
                     complete(HttpResponse(status = StatusCodes.InternalServerError).withEntity(httpEntity))

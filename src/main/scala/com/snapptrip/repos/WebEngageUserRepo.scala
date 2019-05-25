@@ -2,12 +2,11 @@ package com.snapptrip.repos
 
 import java.time.{LocalDate, LocalDateTime}
 
-import akka.http.scaladsl.model.StatusCodes
 import com.snapptrip.DI._
-import com.snapptrip.api.Messages.{FilterUser, WebEngageUserInfo}
+import com.snapptrip.api.Messages.WebEngageUserInfo
 import com.snapptrip.models.WebEngageUser
+import com.snapptrip.utils.DateTimeUtils
 import com.snapptrip.utils.PostgresProfiler.api._
-import com.snapptrip.utils.{DateTimeUtils, ErrorCodes, UserException}
 import slick.lifted.ProvenShape
 
 import scala.concurrent.Future
@@ -65,12 +64,12 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
 
     val query = webEngageUserTable
       .filterOpt(filter.user_name)((table, userName) => table.userName === userName)
-//      .filterOpt(filter.name)((table, name) => table.name === name)
-//      .filterOpt(filter.family)((table, family) => table.family === family)
+      //      .filterOpt(filter.name)((table, name) => table.name === name)
+      //      .filterOpt(filter.family)((table, family) => table.family === family)
       .filterOpt(filter.email)((table, email) => table.email === email)
       .filterOpt(filter.mobile_no)((table, mobileNo) => table.mobileNo === mobileNo)
-//      .filterOpt(filter.birth_date)((table, birthDate) => table.birthDate === birthDate)
-//      .filterOpt(filter.gender)((table, gender) => table.gender === gender)
+      //      .filterOpt(filter.birth_date)((table, birthDate) => table.birthDate === birthDate)
+      //      .filterOpt(filter.gender)((table, gender) => table.gender === gender)
       .result
       .headOption
 
@@ -80,15 +79,11 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
 
   override def save(user: WebEngageUser): Future[String] = {
 
-    findByUserName(user.userName).flatMap {
-      case Some(_) =>
-        Future.failed(new UserException("user already exist", Some(ErrorCodes.USER_EXIST), StatusCodes.BadRequest))
-      case None =>
-        val action = webEngageUserTable returning webEngageUserTable.map(_.id) into ((table, id) =>
-          table.copy(id = Some(id))) += WebEngageUser(None, user.userName, user.userId,
-          DateTimeUtils.nowOpt, None, user.name, user.family, user.email, user.mobileNo, user.birthDate, user.gender, disabled = user.disabled)
-        db.run(action).map(_.userId)
-    }
+    val action = webEngageUserTable returning webEngageUserTable.map(_.id) into ((table, id) =>
+      table.copy(id = Some(id))) += WebEngageUser(None, user.userName, user.userId,
+      DateTimeUtils.nowOpt, None, user.name, user.family, user.email, user.mobileNo, user.birthDate, user.gender, disabled = user.disabled)
+    db.run(action).map(_.userId)
+
   }
 
   override def update(user: WebEngageUser): Future[Boolean] = {

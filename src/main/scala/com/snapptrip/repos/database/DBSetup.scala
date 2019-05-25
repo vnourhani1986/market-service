@@ -1,7 +1,7 @@
 package com.snapptrip.repos.database
 
 import com.snapptrip.DI._
-import com.snapptrip.repos.{SnapptripUserTableComponent, WebEngageUserTableComponent}
+import com.snapptrip.repos.WebEngageUserTableComponent
 import com.snapptrip.utils.PostgresProfiler.api._
 import com.typesafe.scalalogging.LazyLogging
 import slick.jdbc.meta.MTable
@@ -9,7 +9,7 @@ import slick.jdbc.meta.MTable
 import scala.concurrent.Future
 
 
-object DBSetup extends SnapptripUserTableComponent with WebEngageUserTableComponent with LazyLogging {
+object DBSetup extends WebEngageUserTableComponent with LazyLogging {
 
   private val tables = List(
     webEngageUserTable

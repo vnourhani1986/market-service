@@ -1,5 +1,7 @@
 package com.snapptrip.services
 
+import java.util.UUID
+
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.marshalling.Marshal
@@ -9,7 +11,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import com.snapptrip.DI.{ec, materializer, system}
 import com.snapptrip.api.Messages.WebEngageUserInfo
 import com.snapptrip.models.WebEngageUser
-import com.snapptrip.repos.{SnapptripUserRepoImpl, WebEngageUserRepoImpl}
+import com.snapptrip.repos.WebEngageUserRepoImpl
 import com.snapptrip.utils.WebEngageConfig
 import com.typesafe.scalalogging.LazyLogging
 import spray.json.JsValue
@@ -59,50 +61,41 @@ object WebEngage extends LazyLogging {
   def userCheck(request: WebEngageUserInfo): Future[(String, Boolean)] = {
     (for {
       userIdOpt <- WebEngageUserRepoImpl.findByFilter(request)
-      u = println(userIdOpt)
       userId <- if (userIdOpt.isDefined) {
-        val webEngageUser = WebEngageUser(userName = request.user_name,
+        val webEngageUser = WebEngageUser(
+          userName = request.user_name,
           userId = userIdOpt.get,
           name = request.name,
           family = request.family,
           email = request.email,
+          mobileNo = request.mobile_no,
           birthDate = request.birth_date,
           gender = request.gender
         )
         WebEngageUserRepoImpl.update(webEngageUser).map(_ => userIdOpt.get)
       } else {
-        SnapptripUserRepoImpl.findByFilter(request).flatMap {
-          case Some(user) =>
-            val webEngageUser = WebEngageUser(
-              userName = user.userName,
-              userId = "1",
-              name = user.name,
-              family = user.family,
-              email = user.email,
-              birthDate = user.birthDate,
-              gender = user.gender
-            )
-            WebEngageUserRepoImpl.save(webEngageUser)
-          case None =>
-            val webEngageUser = WebEngageUser(userName = request.user_name,
-              userId = "1",
-              name = request.name,
-              family = request.family,
-              email = request.email,
-              birthDate = request.birth_date,
-              gender = request.gender
-            )
-            WebEngageUserRepoImpl.save(webEngageUser)
-        }
 
+        val webEngageUser = WebEngageUser(
+          userName = request.user_name,
+          userId = UUID.randomUUID().toString,
+          name = request.name,
+          family = request.family,
+          email = request.email,
+          mobileNo = request.mobile_no,
+          birthDate = request.birth_date,
+          gender = request.gender
+        )
+        println(webEngageUser)
+        WebEngageUserRepoImpl.save(webEngageUser)
       }
+
     } yield {
       (userId, true)
     }).recover {
       case error: Throwable =>
+        println(error.getMessage)
         (error.getMessage, false)
     }
   }
-
 
 }
