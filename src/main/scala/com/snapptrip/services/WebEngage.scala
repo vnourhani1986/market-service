@@ -60,19 +60,19 @@ object WebEngage extends LazyLogging {
 
   def userCheck(request: WebEngageUserInfo): Future[(String, Boolean)] = {
     (for {
-      userIdOpt <- WebEngageUserRepoImpl.findByFilter(request)
-      userId <- if (userIdOpt.isDefined) {
+      user <- WebEngageUserRepoImpl.findByFilter(request)
+      userId <- if (user.isDefined) {
         val webEngageUser = WebEngageUser(
-          userName = request.user_name,
-          userId = userIdOpt.get,
-          name = request.name,
-          family = request.family,
-          email = request.email,
-          mobileNo = request.mobile_no,
-          birthDate = request.birth_date,
-          gender = request.gender
+          userName = request.user_name.orElse(user.get.userName),
+          userId = user.get.userId,
+          name = request.name.orElse(user.get.name),
+          family = request.family.orElse(user.get.family),
+          email = request.email.orElse(user.get.email),
+          mobileNo = request.mobile_no.orElse(user.get.mobileNo),
+          birthDate = request.birth_date.orElse(user.get.birthDate),
+          gender = request.gender.orElse(user.get.gender)
         )
-        WebEngageUserRepoImpl.update(webEngageUser).map(_ => userIdOpt.get)
+        WebEngageUserRepoImpl.update(webEngageUser).map(_ => user.get.userId)
       } else {
         val webEngageUser = WebEngageUser(
           userName = request.user_name,

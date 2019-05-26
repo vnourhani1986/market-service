@@ -21,7 +21,7 @@ trait WebEngageUserRepo {
 
   def get: Future[Seq[WebEngageUser]]
 
-  def findByFilter(filter: WebEngageUserInfo): Future[Option[String]]
+  def findByFilter(filter: WebEngageUserInfo): Future[Option[WebEngageUser]]
 
   def save(user: WebEngageUser): Future[String]
 
@@ -60,7 +60,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
     db.run(query.result)
   }
 
-  override def findByFilter(filter: WebEngageUserInfo): Future[Option[String]] = {
+  override def findByFilter(filter: WebEngageUserInfo): Future[Option[WebEngageUser]] = {
 
     val query = webEngageUserTable
       //      .filterOpt(filter.user_name)((table, userName) => table.userName === userName)
@@ -73,7 +73,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
       .result
       .headOption
 
-    db.run(query).map(_.map(_.userId))
+    db.run(query)
 
   }
 
