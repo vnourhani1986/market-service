@@ -74,7 +74,6 @@ object WebEngage extends LazyLogging {
         )
         WebEngageUserRepoImpl.update(webEngageUser).map(_ => userIdOpt.get)
       } else {
-
         val webEngageUser = WebEngageUser(
           userName = request.user_name,
           userId = UUID.randomUUID().toString,
@@ -85,7 +84,6 @@ object WebEngage extends LazyLogging {
           birthDate = request.birth_date,
           gender = request.gender
         )
-        println(webEngageUser)
         WebEngageUserRepoImpl.save(webEngageUser)
       }
 

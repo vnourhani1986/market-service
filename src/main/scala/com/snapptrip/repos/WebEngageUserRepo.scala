@@ -63,7 +63,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
   override def findByFilter(filter: WebEngageUserInfo): Future[Option[String]] = {
 
     val query = webEngageUserTable
-      .filterOpt(filter.user_name)((table, userName) => table.userName === userName)
+      //      .filterOpt(filter.user_name)((table, userName) => table.userName === userName)
       //      .filterOpt(filter.name)((table, name) => table.name === name)
       //      .filterOpt(filter.family)((table, family) => table.family === family)
       .filterOpt(filter.email)((table, email) => table.email === email)
