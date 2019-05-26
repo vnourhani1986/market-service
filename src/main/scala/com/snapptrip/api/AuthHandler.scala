@@ -17,10 +17,9 @@ import com.snapptrip.DI._
 import com.snapptrip.api.Messages.{UserInfo, UserLoginInfo, UserLoginRequest}
 import com.snapptrip.auth.SnapptripAuthConfig
 import com.snapptrip.formats.Formats._
-import com.snapptrip.repos.{BusinessRepoImpl, UsersRepoImpl}
 import com.snapptrip.utils._
 import com.typesafe.scalalogging.LazyLogging
-import spray.json.{JsBoolean, JsObject, JsString, JsonParser, enrichAny}
+import spray.json.{JsBoolean, JsObject, JsString, JsonParser}
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
@@ -42,7 +41,7 @@ object AuthHandler extends LazyLogging {
           get {
             optionalHeaderValueByName("x-ptp-token") {
               case Some(value) => instance.getUserInfo(value)
-              case None        => complete(StatusCodes.Unauthorized)
+              case None => complete(StatusCodes.Unauthorized)
             }
 
           }
@@ -57,7 +56,7 @@ object AuthHandler extends LazyLogging {
         authorizeAsyncWithResult(instance.authentication(token)) { tu =>
           innerRoute(tu._1, tu._2)
         }
-      case None        =>
+      case None =>
         logger.error("authenticated rejected")
         reject(AuthorizationFailedRejection)
     }
@@ -67,7 +66,7 @@ object AuthHandler extends LazyLogging {
     extractExecutionContext.flatMap { implicit ec ⇒
       onComplete(f).flatMap {
         case Success(t) ⇒ provide(t)
-        case _          ⇒ reject(AuthorizationFailedRejection)
+        case _ ⇒ reject(AuthorizationFailedRejection)
       }
     }
 
@@ -137,7 +136,7 @@ class AuthHandler extends LazyLogging {
         respondWithHeader(RawHeader("x-ptp-token", token.getOrElse(""))) {
           complete(OK)
         }
-      case Failure(err)   =>
+      case Failure(err) =>
         //failWith(HttpError(StatusCodes.Unauthorized -> err))
         complete(StatusCodes.Unauthorized)
     }
@@ -146,77 +145,79 @@ class AuthHandler extends LazyLogging {
 
   def authentication(token: String): Future[(UserInfo, Option[String])] = {
 
-    val genTokenFut = for {
+    //    val genTokenFut = for {
+    //
+    //      (entity, status) <- authUserToSnapptripAuth(token)
+    //      _ <- if (status == OK) Future.successful(status)
+    //      else Future.failed(new SnapptripAuthGetUserException("user is not valid", Some(ErrorCodes.USER_IS_NOT_VALID), StatusCodes.BadRequest))
+    //
+    //      username = JsonParser(entity).asJsObject.getFields("username")
+    //        .headOption.map(_.convertTo[String])
+    //
+    //      _ <- if (username.isDefined) Future.successful(status)
+    //      else Future.failed(new SnapptripAuthGetUserException("username field is not exist", Some(ErrorCodes.USER_IS_NOT_VALID), StatusCodes.BadRequest))
+    //
+    //      userInfo <- UsersRepoImpl.findOptionalByUserName(username.get)
+    //
+    //      _ <- if (userInfo.isDefined) Future.successful(true)
+    //      else Future.failed(new SnapptripAuthGetUserException("username field is not exist", Some(ErrorCodes.USER_IS_NOT_VALID), StatusCodes.BadRequest))
+    //
+    //      disabled <- UsersRepoImpl.isDisabled(userInfo.get.userName.get)
+    //
+    //      _ <- if (!disabled) Future.successful(true)
+    //      else Future.failed(new SnapptripAuthGetUserException("the username is disabled", Some(ErrorCodes.USER_IS_DISABLED), StatusCodes.Unauthorized))
+    //
+    //      channel <- if (userInfo.get.businessId.isDefined)
+    //        BusinessRepoImpl.findById(userInfo.get.businessId.get).map(_.map(business => s"""b2b_${business.code}"""))
+    //      else Future.successful(None)
+    //
+    //    } yield {
+    //
+    //      (UserInfo(userInfo.get.userName, userInfo.get.businessId, userInfo.get.role.toString), channel)
+    //    }
+    //
+    //    genTokenFut
 
-      (entity, status) <- authUserToSnapptripAuth(token)
-      _ <- if (status == OK) Future.successful(status)
-      else Future.failed(new SnapptripAuthGetUserException("user is not valid", Some(ErrorCodes.USER_IS_NOT_VALID), StatusCodes.BadRequest))
-
-      username = JsonParser(entity).asJsObject.getFields("username")
-        .headOption.map(_.convertTo[String])
-
-      _ <- if (username.isDefined) Future.successful(status)
-      else Future.failed(new SnapptripAuthGetUserException("username field is not exist", Some(ErrorCodes.USER_IS_NOT_VALID), StatusCodes.BadRequest))
-
-      userInfo <- UsersRepoImpl.findOptionalByUserName(username.get)
-
-      _ <- if (userInfo.isDefined) Future.successful(true)
-      else Future.failed(new SnapptripAuthGetUserException("username field is not exist", Some(ErrorCodes.USER_IS_NOT_VALID), StatusCodes.BadRequest))
-
-      disabled <- UsersRepoImpl.isDisabled(userInfo.get.userName)
-
-      _ <- if (!disabled) Future.successful(true)
-      else Future.failed(new SnapptripAuthGetUserException("the username is disabled", Some(ErrorCodes.USER_IS_DISABLED), StatusCodes.Unauthorized))
-
-      channel <- if (userInfo.get.businessId.isDefined)
-        BusinessRepoImpl.findById(userInfo.get.businessId.get).map(_.map(business => s"""b2b_${business.code}"""))
-      else Future.successful(None)
-
-    } yield {
-
-      (UserInfo(userInfo.get.userName, userInfo.get.businessId, userInfo.get.role.toString), channel)
-    }
-
-    genTokenFut
+    ???
 
   }
 
   private def getUserInfo(token: String) = {
 
-    val genTokenFut = for {
-
-      (entity, status) <- authUserToSnapptripAuth(token)
-
-      _ <- if (status == OK) Future.successful(status)
-      else Future.failed(new SnapptripAuthGetUserException("user is not valid", Some(ErrorCodes.USER_IS_NOT_VALID), StatusCodes.BadRequest))
-
-      username = JsonParser(entity).asJsObject.getFields("username")
-        .headOption.map(_.convertTo[String])
-
-      _ = logger.info(s"username:${username.getOrElse("")}")
-
-      _ <- if (username.isDefined) Future.successful(status)
-      else Future.failed(new SnapptripAuthGetUserException("username field is not exist", Some(ErrorCodes.USER_IS_NOT_VALID), StatusCodes.BadRequest))
-
-      userInfo <- UsersRepoImpl.findOptionalByUserName(username.get)
-
-      _ <- if (userInfo.isDefined) Future.successful(true)
-      else Future.failed(new SnapptripAuthGetUserException("username in not found", Some(ErrorCodes.USER_IS_NOT_VALID), StatusCodes.BadRequest))
-
-      _ = logger.info(s"userInfo:$userInfo")
-
-    } yield UserInfo(userInfo.get.userName, userInfo.get.businessId, userInfo.get.role.toString)
-
-    onComplete(genTokenFut) {
-      case Success(userInfo) =>
-        respondWithHeader(RawHeader("x-ptp-token", token)) {
-          complete(OK, userInfo.toJson)
-        }
-      case Failure(err)      =>
-        //failWith(HttpError(StatusCodes.Unauthorized -> err))
-        complete(StatusCodes.Unauthorized)
-    }
-
+    //    val genTokenFut = for {
+    //
+    //      (entity, status) <- authUserToSnapptripAuth(token)
+    //
+    //      _ <- if (status == OK) Future.successful(status)
+    //      else Future.failed(new SnapptripAuthGetUserException("user is not valid", Some(ErrorCodes.USER_IS_NOT_VALID), StatusCodes.BadRequest))
+    //
+    //      username = JsonParser(entity).asJsObject.getFields("username")
+    //        .headOption.map(_.convertTo[String])
+    //
+    //      _ = logger.info(s"username:${username.getOrElse("")}")
+    //
+    //      _ <- if (username.isDefined) Future.successful(status)
+    //      else Future.failed(new SnapptripAuthGetUserException("username field is not exist", Some(ErrorCodes.USER_IS_NOT_VALID), StatusCodes.BadRequest))
+    //
+    //      userInfo <- UsersRepoImpl.findOptionalByUserName(username.get)
+    //
+    //      _ <- if (userInfo.isDefined) Future.successful(true)
+    //      else Future.failed(new SnapptripAuthGetUserException("username in not found", Some(ErrorCodes.USER_IS_NOT_VALID), StatusCodes.BadRequest))
+    //
+    //      _ = logger.info(s"userInfo:$userInfo")
+    //
+    //    } yield UserInfo(userInfo.get.userName, userInfo.get.businessId, userInfo.get.role.toString)
+    //
+    //    onComplete(genTokenFut) {
+    //      case Success(userInfo) =>
+    //        respondWithHeader(RawHeader("x-ptp-token", token)) {
+    //          complete(OK, userInfo.toJson)
+    //        }
+    //      case Failure(err)      =>
+    //        //failWith(HttpError(StatusCodes.Unauthorized -> err))
+    //        complete(StatusCodes.Unauthorized)
+    //    }
+    ???
   }
 
 }

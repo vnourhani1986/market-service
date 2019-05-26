@@ -12,10 +12,10 @@ import com.snapptrip.auth.UserRole
 import com.snapptrip.formats.Formats._
 import com.snapptrip.notification.email.EmailService
 import com.snapptrip.notification.sms.SmsService
-import com.snapptrip.repos.{BusinessRepoImpl, UsersRepoImpl}
+import com.snapptrip.repos.BusinessRepoImpl
 import com.snapptrip.services.WebEngage
 import com.typesafe.scalalogging.LazyLogging
-import spray.json.{JsNumber, JsObject, JsString, JsValue, JsonParser}
+import spray.json.{JsNumber, JsObject, JsString, JsValue}
 
 import scala.concurrent.ExecutionContextExecutor
 
@@ -68,42 +68,43 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
               complete(businessInfo)
           }
         }
-      } ~
-        get {
-          logger.info(
-            s"""get users request""")
-          onSuccess(UsersRepoImpl.get) {
-            users =>
-              logger.info(s"""get users response users size : ${users.size} by user : $userInfo""")
-              complete(users)
-          }
-        } ~
-        path("add-user") {
-          post {
-            entity(as[NewUser]) { user =>
-              logger.info(
-                s"""add new user request by filter content: $user""")
-              onSuccess(UsersRepoImpl.save(user)) {
-                id =>
-                  logger.info(s"""add new user response by id : $id by user : $userInfo""")
-                  complete(id.toString)
-              }
-            }
-          }
-        } ~
-        path("edit-user") {
-          put {
-            entity(as[EditUser]) { user =>
-              logger.info(
-                s"""edit new user request by filter content: $user""")
-              onSuccess(UsersRepoImpl.update(user)) {
-                saveResult =>
-                  logger.info(s"""edit new user response by result : $saveResult by user : $userInfo""")
-                  complete(saveResult.toString)
-              }
-            }
-          }
-        }
+      }
+      //      ~
+      //        get {
+      //          logger.info(
+      //            s"""get users request""")
+      //          onSuccess(UsersRepoImpl.get) {
+      //            users =>
+      //              logger.info(s"""get users response users size : ${users.size} by user : $userInfo""")
+      //              complete(users)
+      //          }
+      //        } ~
+      //        path("add-user") {
+      //          post {
+      //            entity(as[WebEngageUser]) { user =>
+      //              logger.info(
+      //                s"""add new user request by filter content: $user""")
+      //              onSuccess(UsersRepoImpl.save(user)) {
+      //                id =>
+      //                  logger.info(s"""add new user response by id : $id by user : $userInfo""")
+      //                  complete(id.toString)
+      //              }
+      //            }
+      //          }
+      //        } ~
+      //        path("edit-user") {
+      //          put {
+      //            entity(as[WebEngageUser]) { user =>
+      //              logger.info(
+      //                s"""edit new user request by filter content: $user""")
+      //              onSuccess(UsersRepoImpl.update(user)) {
+      //                saveResult =>
+      //                  logger.info(s"""edit new user response by result : $saveResult by user : $userInfo""")
+      //                  complete(saveResult.toString)
+      //              }
+      //            }
+      //          }
+      //        }
     }
   }
 
@@ -214,6 +215,74 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
                     "message" -> JsString("server_error")
                   ).toString
                   complete(HttpResponse(status = status).withEntity(entity))
+              }
+            }
+          }
+        } ~
+        path("user" / "check") {
+          post {
+            entity(as[WebEngageUserInfo]) { body =>
+              logger.info(s"""post check user request by body $body""")
+              if (body.email.isEmpty && body.mobile_no.isEmpty) {
+                logger.info(s"""post check user response by result: server error and status: 400""")
+                val entity = JsObject(
+                  "status" -> JsString("ERROR"),
+                  "user_id" -> JsString("-1")
+                ).toString
+                val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
+                complete(HttpResponse(status = StatusCodes.BadRequest).withEntity(httpEntity))
+              } else {
+                onSuccess(WebEngage.userCheck(body)) {
+                  case (userId, status) if status =>
+                    logger.info(s"""post check user response by status: 200""")
+                    val entity = JsObject(
+                      "status" -> JsString("SUCCESS"),
+                      "user_id" -> JsString(userId),
+                    ).toString
+                    val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
+                    complete(HttpResponse(status = StatusCodes.OK).withEntity(httpEntity))
+                  case (_, _) =>
+                    logger.info(s"""post check user response by result: server error and status: 500""")
+                    val entity = JsObject(
+                      "status" -> JsString("ERROR"),
+                      "user_id" -> JsString("-1")
+                    ).toString
+                    val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
+                    complete(HttpResponse(status = StatusCodes.InternalServerError).withEntity(httpEntity))
+                }
+              }
+            }
+          }
+        } ~
+        path("user" / "add") {
+          post {
+            entity(as[WebEngageUserInfo]) { body =>
+              logger.info(s"""post check user request by body $body""")
+              if (body.email.isEmpty && body.mobile_no.isEmpty) {
+                logger.info(s"""post check user response by result: server error and status: 400""")
+                val entity = JsObject(
+                  "status" -> JsString("ERROR"),
+                  "user_id" -> JsString("-1")
+                ).toString
+                val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
+                complete(HttpResponse(status = StatusCodes.BadRequest).withEntity(httpEntity))
+              } else {
+                onSuccess(WebEngage.userCheck(body)) {
+                  case (_, status) if status =>
+                    logger.info(s"""post check user response by status: 200""")
+                    val entity = JsObject(
+                      "status" -> JsString("SUCCESS")
+                    ).toString
+                    val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
+                    complete(HttpResponse(status = StatusCodes.OK).withEntity(httpEntity))
+                  case (_, _) =>
+                    logger.info(s"""post check user response by result: server error and status: 500""")
+                    val entity = JsObject(
+                      "status" -> JsString("ERROR")
+                    ).toString
+                    val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
+                    complete(HttpResponse(status = StatusCodes.InternalServerError).withEntity(httpEntity))
+                }
               }
             }
           }
