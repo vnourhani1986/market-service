@@ -7,18 +7,24 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.marshalling.Marshal
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
+import akka.pattern.ask
 import akka.stream.scaladsl.{Sink, Source}
+import akka.util.Timeout
 import com.snapptrip.DI.{ec, materializer, system}
-import com.snapptrip.api.Messages.WebEngageUserInfo
+import com.snapptrip.api.Messages.{WebEngageUserInfo, WebEngageUserInfoWithUserId}
 import com.snapptrip.models.WebEngageUser
 import com.snapptrip.repos.WebEngageUserRepoImpl
 import com.snapptrip.utils.WebEngageConfig
+import com.snapptrip.webengage.{SendUserInfo, WebengageService}
 import com.typesafe.scalalogging.LazyLogging
 import spray.json.JsValue
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 object WebEngage extends LazyLogging {
+
+  private implicit val timeout: Timeout = Timeout(1.minutes)
 
   def trackUser(request: JsValue) = {
     logger.info(s"""request track users to web engage with content:$request""")
@@ -58,21 +64,37 @@ object WebEngage extends LazyLogging {
     }
   }
 
-  def userCheck(request: WebEngageUserInfo): Future[(String, Boolean)] = {
+  def userCheck(request: WebEngageUserInfo): Future[(WebEngageUserInfoWithUserId, Boolean)] = {
     (for {
-      user <- WebEngageUserRepoImpl.findByFilter(request)
-      userId <- if (user.isDefined) {
+      oldUser <- WebEngageUserRepoImpl.findByFilter(request)
+      user <- if (oldUser.isDefined) {
         val webEngageUser = WebEngageUser(
-          userName = request.user_name.orElse(user.get.userName),
-          userId = user.get.userId,
-          name = request.name.orElse(user.get.name),
-          family = request.family.orElse(user.get.family),
-          email = request.email.orElse(user.get.email),
-          mobileNo = request.mobile_no.orElse(user.get.mobileNo),
-          birthDate = request.birth_date.orElse(user.get.birthDate),
-          gender = request.gender.orElse(user.get.gender)
+          userName = request.user_name.orElse(oldUser.get.userName),
+          userId = oldUser.get.userId,
+          name = request.name.orElse(oldUser.get.name),
+          family = request.family.orElse(oldUser.get.family),
+          email = request.email.orElse(oldUser.get.email),
+          mobileNo = request.mobile_no.orElse(oldUser.get.mobileNo),
+          birthDate = request.birth_date.orElse(oldUser.get.birthDate),
+          gender = request.gender.orElse(oldUser.get.gender),
+          provider = request.gender.orElse(oldUser.get.provider)
         )
-        WebEngageUserRepoImpl.update(webEngageUser).map(_ => user.get.userId)
+        WebEngageUserRepoImpl.update(webEngageUser).map {
+          case true =>
+            Right(WebEngageUserInfoWithUserId(
+              userId = webEngageUser.userId,
+//              user_name = webEngageUser.userName,
+              firstName = webEngageUser.name,
+              lastName = webEngageUser.family,
+              email = webEngageUser.email,
+              phone = webEngageUser.mobileNo,
+//              birthDate = webEngageUser.birthDate,
+              gender = webEngageUser.gender,
+//              provider = webEngageUser.provider
+            ))
+          case false =>
+            Left(new Exception("can not update user data in database"))
+        }
       } else {
         val webEngageUser = WebEngageUser(
           userName = request.user_name,
@@ -82,17 +104,33 @@ object WebEngage extends LazyLogging {
           email = request.email,
           mobileNo = request.mobile_no,
           birthDate = request.birth_date,
-          gender = request.gender
+          gender = request.gender,
+          provider = request.provider
         )
-        WebEngageUserRepoImpl.save(webEngageUser)
+        WebEngageUserRepoImpl.save(webEngageUser).map(user =>
+          Right(WebEngageUserInfoWithUserId(
+            userId = user.userId,
+//            user_name = user.userName,
+            firstName = user.name,
+            lastName = user.family,
+            email = user.email,
+            phone = user.mobileNo,
+//            birth_date = user.birthDate,
+            gender = user.gender,
+//            provider = user.provider
+          ))
+        )
       }
-
+      _ <- user match {
+        case Right(u) => (new WebengageService).actor ? SendUserInfo(u)
+        case Left(e) => Future.failed(e)
+      }
     } yield {
-      (userId, true)
+      (user.right.get, true)
     }).recover {
       case error: Throwable =>
         println(error.getMessage)
-        (error.getMessage, false)
+        (WebEngageUserInfoWithUserId(userId = "-1"), false)
     }
   }
 

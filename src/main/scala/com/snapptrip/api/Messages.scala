@@ -59,6 +59,23 @@ object Messages {
                                 mobile_no: Option[String] = None,
                                 birth_date: Option[LocalDate] = None,
                                 gender: Option[String] = None,
+                                provider: Option[String] = None
                               )
+
+  case class WebEngageUserAttributes(Age: String)
+
+  case class WebEngageUserInfoWithUserId(
+                                userId: String,
+//                                user_name: Option[String] = None,
+                                firstName: Option[String] = None,
+                                lastName: Option[String] = None,
+                                email: Option[String] = None,
+                                phone: Option[String] = None,
+                                birthDate: Option[LocalDate] = None,
+                                gender: Option[String] = None,
+//                                provider: Option[String] = None,
+
+                              )
+
 
 }
