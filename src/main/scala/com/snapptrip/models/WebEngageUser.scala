@@ -17,6 +17,7 @@ case class WebEngageUser(
                  mobileNo: Option[String] = None,
                  birthDate: Option[LocalDate] = None,
                  gender: Option[String] = None,
+                 provider: Option[String] = None,
                  disabled: Boolean = false,
                  deleted: Boolean = false
                )

@@ -233,11 +233,11 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
                 complete(HttpResponse(status = StatusCodes.BadRequest).withEntity(httpEntity))
               } else {
                 onSuccess(WebEngage.userCheck(body)) {
-                  case (userId, status) if status =>
+                  case (user, status) if status =>
                     logger.info(s"""post check user response by status: 200""")
                     val entity = JsObject(
                       "status" -> JsString("SUCCESS"),
-                      "user_id" -> JsString(userId),
+                      "user_id" -> JsString(user.userId),
                     ).toString
                     val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
                     complete(HttpResponse(status = StatusCodes.OK).withEntity(httpEntity))

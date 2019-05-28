@@ -23,7 +23,7 @@ trait WebEngageUserRepo {
 
   def findByFilter(filter: WebEngageUserInfo): Future[Option[WebEngageUser]]
 
-  def save(user: WebEngageUser): Future[String]
+  def save(user: WebEngageUser): Future[WebEngageUser]
 
   def update(user: WebEngageUser): Future[Boolean]
 
@@ -77,24 +77,25 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
 
   }
 
-  override def save(user: WebEngageUser): Future[String] = {
+  override def save(user: WebEngageUser): Future[WebEngageUser] = {
 
     val action = webEngageUserTable returning webEngageUserTable.map(_.id) into ((table, id) =>
       table.copy(id = Some(id))) += WebEngageUser(None, user.userName, user.userId,
-      DateTimeUtils.nowOpt, None, user.name, user.family, user.email, user.mobileNo, user.birthDate, user.gender, disabled = user.disabled)
-    db.run(action).map(_.userId)
+      DateTimeUtils.nowOpt, None, user.name, user.family, user.email, user.mobileNo, user.birthDate, user.gender, user.provider, disabled = user.disabled)
+    db.run(action)
 
   }
 
   override def update(user: WebEngageUser): Future[Boolean] = {
 
     val action = webEngageUserTable
-      .filter(table => table.userName === user.userName)
+      .filterOpt(user.email)((table, email) => table.email === email)
+      .filterOpt(user.mobileNo)((table, mobileNo) => table.mobileNo === mobileNo)
       .map(x => (x.userName, x.name, x.family, x.email, x.birthDate, x.gender, x.modifiedAt, x.disabled))
       .update((user.userName, user.name, user.family, user.email, user.birthDate, user.gender, DateTimeUtils.nowOpt,
         user.disabled))
 
-    db.run(action).map(_ == 1)
+    db.run(action).map(_ > 0)
 
   }
 
@@ -137,6 +138,8 @@ private[repos] trait WebEngageUserTableComponent extends SlickSupport {
 
     def gender: Rep[Option[String]] = column[Option[String]]("gender")
 
+    def provider: Rep[Option[String]] = column[Option[String]]("provider")
+
     def disabled: Rep[Boolean] = column[Boolean]("disabled", O.Default(false))
 
     def deleted: Rep[Boolean] = column[Boolean]("deleted", O.Default(false))
@@ -153,6 +156,7 @@ private[repos] trait WebEngageUserTableComponent extends SlickSupport {
       mobileNo,
       birthDate,
       gender,
+      provider,
       disabled,
       deleted) <> ((WebEngageUser.apply _).tupled, WebEngageUser.unapply)
   }
