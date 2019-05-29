@@ -117,7 +117,6 @@ object WebEngage extends LazyLogging {
             val birthDate = Try{
               webEngageUser.birthDate.map(x => LocalDateTime.of(x, LocalTime.of(1, 1, 1, 1)).toString.replace(".","-").concat("0"))
             }.toOption.flatten
-            println(birthDate)
             Right(WebEngageUserInfoWithUserId(
               userId = webEngageUser.userId,
               //              user_name = webEngageUser.userName,
