@@ -31,3 +31,4 @@ class OnlineRefundException(cause: String, errorCode: Option[Int], statusCode: S
 class UserException(cause: String, errorCode: Option[Int], statusCode: StatusCode) extends ExtendedException(cause: String, errorCode: Option[Int], statusCode: StatusCode)
 
 
+

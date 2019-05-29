@@ -131,9 +131,9 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
       } ~
         path("events") {
           post {
-            entity(as[JsValue]) { body =>
+            entity(as[WebEngageEvent]) { body =>
               logger.info(s"""post events request by body $body""")
-              onSuccess(WebEngage.trackEvent(body)) {
+              onSuccess(WebEngage.trackEventWithoutUserId(body)) {
                 case (status, entity) if status == StatusCodes.Created =>
                   logger.info(s"""post events response by result: $entity and status: $status""")
                   complete(HttpResponse(status = status).withEntity(entity))

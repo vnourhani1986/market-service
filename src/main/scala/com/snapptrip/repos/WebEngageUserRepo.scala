@@ -23,6 +23,8 @@ trait WebEngageUserRepo {
 
   def findByFilter(filter: WebEngageUserInfo): Future[Option[WebEngageUser]]
 
+  def findByFilter(mobileNo: Option[String], email: Option[String]): Future[Option[WebEngageUser]]
+
   def save(user: WebEngageUser): Future[WebEngageUser]
 
   def update(user: WebEngageUser): Future[Boolean]
@@ -66,8 +68,25 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
       //      .filterOpt(filter.user_name)((table, userName) => table.userName === userName)
       //      .filterOpt(filter.name)((table, name) => table.name === name)
       //      .filterOpt(filter.family)((table, family) => table.family === family)
-      .filterOpt(filter.email)((table, email) => table.email === email)
-      .filterOpt(filter.mobile_no)((table, mobileNo) => table.mobileNo === mobileNo)
+      .filterOpt(filter.email)((table, email) => table.email === email || (table.email.isEmpty && filter.mobile_no.isDefined))
+      .filterOpt(filter.mobile_no)((table, mobileNo) => table.mobileNo === mobileNo || (table.mobileNo.isEmpty && filter.email.isDefined))
+      //      .filterOpt(filter.birth_date)((table, birthDate) => table.birthDate === birthDate)
+      //      .filterOpt(filter.gender)((table, gender) => table.gender === gender)
+      .result
+      .headOption
+
+    db.run(query)
+
+  }
+
+  override def findByFilter(mobileNo: Option[String], email: Option[String]): Future[Option[WebEngageUser]] = {
+
+    val query = webEngageUserTable
+      //      .filterOpt(filter.user_name)((table, userName) => table.userName === userName)
+      //      .filterOpt(filter.name)((table, name) => table.name === name)
+      //      .filterOpt(filter.family)((table, family) => table.family === family)
+      .filterOpt(email)((table, email) => table.email === email || (table.email.isEmpty && mobileNo.isDefined))
+      .filterOpt(mobileNo)((table, mobileNo) => table.mobileNo === mobileNo || (table.mobileNo.isEmpty && email.isDefined))
       //      .filterOpt(filter.birth_date)((table, birthDate) => table.birthDate === birthDate)
       //      .filterOpt(filter.gender)((table, gender) => table.gender === gender)
       .result
@@ -89,10 +108,10 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
   override def update(user: WebEngageUser): Future[Boolean] = {
 
     val action = webEngageUserTable
-      .filterOpt(user.email)((table, email) => table.email === email)
-      .filterOpt(user.mobileNo)((table, mobileNo) => table.mobileNo === mobileNo)
-      .map(x => (x.userName, x.name, x.family, x.email, x.birthDate, x.gender, x.modifiedAt, x.disabled))
-      .update((user.userName, user.name, user.family, user.email, user.birthDate, user.gender, DateTimeUtils.nowOpt,
+      .filterOpt(user.email)((table, email) => table.email === email || (table.email.isEmpty && user.mobileNo.isDefined))
+      .filterOpt(user.mobileNo)((table, mobileNo) => table.mobileNo === mobileNo || (table.mobileNo.isEmpty && user.email.isDefined))
+      .map(x => (x.userName, x.name, x.family, x.email, x.mobileNo, x.birthDate, x.gender, x.modifiedAt, x.disabled))
+      .update((user.userName, user.name, user.family, user.email, user.mobileNo, user.birthDate, user.gender, DateTimeUtils.nowOpt,
         user.disabled))
 
     db.run(action).map(_ > 0)
