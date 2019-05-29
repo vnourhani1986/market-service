@@ -1,6 +1,7 @@
 package com.snapptrip.services
 
-import java.time.{LocalDate, LocalDateTime, LocalTime}
+import java.time.format.DateTimeFormatter
+import java.time.{LocalDateTime, LocalTime}
 import java.util.UUID
 
 import akka.http.scaladsl.Http
@@ -113,7 +114,6 @@ object WebEngage extends LazyLogging {
         )
         WebEngageUserRepoImpl.update(webEngageUser).map {
           case true =>
-            val birthDate = webEngageUser.birthDate.map(x => LocalDateTime.of(x, LocalTime.of(0, 0 , 0, 0)))
             Right(WebEngageUserInfoWithUserId(
               userId = webEngageUser.userId,
               //              user_name = webEngageUser.userName,
@@ -121,7 +121,7 @@ object WebEngage extends LazyLogging {
               lastName = webEngageUser.family,
               email = webEngageUser.email,
               phone = webEngageUser.mobileNo,
-              birthDate = birthDate,
+//              birthDate = birthDate,
               gender = webEngageUser.gender,
               //              provider = webEngageUser.provider
             ))
@@ -140,8 +140,7 @@ object WebEngage extends LazyLogging {
           gender = request.gender,
           provider = request.provider
         )
-        WebEngageUserRepoImpl.save(webEngageUser).map{user =>
-        val birthDate = user.birthDate.map(x => LocalDateTime.of(x, LocalTime.of(0, 0 , 0, 0)))
+        WebEngageUserRepoImpl.save(webEngageUser).map { user =>
           Right(WebEngageUserInfoWithUserId(
             userId = user.userId,
             //            user_name = user.userName,
@@ -149,11 +148,12 @@ object WebEngage extends LazyLogging {
             lastName = user.family,
             email = user.email,
             phone = user.mobileNo,
-            birthDate = birthDate,
+//            birthDate = birthDate,
             gender = user.gender,
             //            provider = user.provider
           )
-        )}
+          )
+        }
       }
       _ <- user match {
         case Right(u) => (new WebengageService).actor ? SendUserInfo(u)
