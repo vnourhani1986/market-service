@@ -23,6 +23,7 @@ import spray.json.{JsObject, JsString, JsValue}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.util.Try
 
 object WebEngage extends LazyLogging {
 
@@ -99,7 +100,6 @@ object WebEngage extends LazyLogging {
   def userCheck(request: WebEngageUserInfo): Future[(WebEngageUserInfoWithUserId, Boolean)] = {
     (for {
       oldUser <- WebEngageUserRepoImpl.findByFilter(request)
-      u = println(oldUser)
       user <- if (oldUser.isDefined) {
         val webEngageUser = WebEngageUser(
           userName = request.user_name.orElse(oldUser.get.userName),
@@ -114,6 +114,10 @@ object WebEngage extends LazyLogging {
         )
         WebEngageUserRepoImpl.update(webEngageUser).map {
           case true =>
+            val birthDate = Try{
+              webEngageUser.birthDate.map(x => LocalDateTime.of(x, LocalTime.of(1, 1, 1, 1)).toString.replace(".","-").concat("0"))
+            }.toOption.flatten
+            println(birthDate)
             Right(WebEngageUserInfoWithUserId(
               userId = webEngageUser.userId,
               //              user_name = webEngageUser.userName,
@@ -121,7 +125,7 @@ object WebEngage extends LazyLogging {
               lastName = webEngageUser.family,
               email = webEngageUser.email,
               phone = webEngageUser.mobileNo,
-//              birthDate = birthDate,
+              birthDate = birthDate,
               gender = webEngageUser.gender,
               //              provider = webEngageUser.provider
             ))
@@ -141,6 +145,9 @@ object WebEngage extends LazyLogging {
           provider = request.provider
         )
         WebEngageUserRepoImpl.save(webEngageUser).map { user =>
+          val birthDate = Try{
+            user.birthDate.map(x => LocalDateTime.of(x, LocalTime.of(1, 1, 1, 1)).toString.replace(".","-").concat("0"))
+          }.toOption.flatten
           Right(WebEngageUserInfoWithUserId(
             userId = user.userId,
             //            user_name = user.userName,
@@ -148,7 +155,7 @@ object WebEngage extends LazyLogging {
             lastName = user.family,
             email = user.email,
             phone = user.mobileNo,
-//            birthDate = birthDate,
+            birthDate = birthDate,
             gender = user.gender,
             //            provider = user.provider
           )
@@ -163,7 +170,6 @@ object WebEngage extends LazyLogging {
       (user.right.get, true)
     }).recover {
       case error: Throwable =>
-        println(error.getMessage)
         (WebEngageUserInfoWithUserId(userId = "-1"), false)
     }
   }

@@ -72,7 +72,7 @@ object Messages {
                                 lastName: Option[String] = None,
                                 email: Option[String] = None,
                                 phone: Option[String] = None,
-                                birthDate: Option[LocalDateTime] = None,
+                                birthDate: Option[String] = None,
                                 gender: Option[String] = None,
 //                                provider: Option[String] = None,
 
