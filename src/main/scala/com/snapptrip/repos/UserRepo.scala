@@ -4,7 +4,7 @@ import java.time.{LocalDate, LocalDateTime}
 
 import com.snapptrip.DI._
 import com.snapptrip.api.Messages.WebEngageUserInfo
-import com.snapptrip.models.WebEngageUser
+import com.snapptrip.models.User
 import com.snapptrip.utils.DateTimeUtils
 import com.snapptrip.utils.PostgresProfiler.api._
 import slick.lifted.ProvenShape
@@ -13,41 +13,41 @@ import scala.concurrent.Future
 
 trait WebEngageUserRepo {
 
-  def findByUserName(userName: Option[String]): Future[Option[WebEngageUser]]
+  def findByUserName(userName: Option[String]): Future[Option[User]]
 
-  def findOptionalByUserName(userName: Option[String]): Future[Option[WebEngageUser]]
+  def findOptionalByUserName(userName: Option[String]): Future[Option[User]]
 
-  def findOrCreateByUserName(userName: Option[String]): Future[WebEngageUser]
+  def findOrCreateByUserName(userName: Option[String]): Future[User]
 
-  def get: Future[Seq[WebEngageUser]]
+  def get: Future[Seq[User]]
 
-  def findByFilter(filter: WebEngageUserInfo): Future[Option[WebEngageUser]]
+  def findByFilter(filter: WebEngageUserInfo): Future[Option[User]]
 
-  def findByFilter(mobileNo: Option[String], email: Option[String]): Future[Option[WebEngageUser]]
+  def findByFilter(mobileNo: Option[String], email: Option[String]): Future[Option[User]]
 
-  def save(user: WebEngageUser): Future[WebEngageUser]
+  def save(user: User): Future[User]
 
-  def update(user: WebEngageUser): Future[Boolean]
+  def update(user: User): Future[Boolean]
 
   def isDisabled(userName: String): Future[Boolean]
 
 }
 
 object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableComponent {
-  override def findByUserName(userName: Option[String]): Future[Option[WebEngageUser]] = {
-    val query = webEngageUserTable.filterOpt(userName)((table, un) => table.userName === un).result.headOption
+  override def findByUserName(userName: Option[String]): Future[Option[User]] = {
+    val query = userTable.filterOpt(userName)((table, un) => table.userName === un).result.headOption
     db.run(query)
   }
 
-  override def findOptionalByUserName(userName: Option[String]): Future[Option[WebEngageUser]] = {
-    val query = webEngageUserTable.filterOpt(userName)((table, un) => table.userName === un).result.headOption
+  override def findOptionalByUserName(userName: Option[String]): Future[Option[User]] = {
+    val query = userTable.filterOpt(userName)((table, un) => table.userName === un).result.headOption
     db.run(query)
   }
 
-  override def findOrCreateByUserName(userName: Option[String]): Future[WebEngageUser] = {
+  override def findOrCreateByUserName(userName: Option[String]): Future[User] = {
 
-    val queryToFind = webEngageUserTable.filterOpt(userName)((table, un) => table.userName === un).result.headOption
-    val queryToInsert = webEngageUserTable returning webEngageUserTable += WebEngageUser(userName = userName, userId = "1")
+    val queryToFind = userTable.filterOpt(userName)((table, un) => table.userName === un).result.headOption
+    val queryToInsert = userTable returning userTable += User(userName = userName, userId = "1")
 
     for {
       userOpt <- db.run(queryToFind)
@@ -57,14 +57,14 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
     } yield foundOrCreatedUser
   }
 
-  override def get: Future[Seq[WebEngageUser]] = {
-    val query = webEngageUserTable
+  override def get: Future[Seq[User]] = {
+    val query = userTable
     db.run(query.result)
   }
 
-  override def findByFilter(filter: WebEngageUserInfo): Future[Option[WebEngageUser]] = {
+  override def findByFilter(filter: WebEngageUserInfo): Future[Option[User]] = {
 
-    val query = webEngageUserTable
+    val query = userTable
       //      .filterOpt(filter.user_name)((table, userName) => table.userName === userName)
       //      .filterOpt(filter.name)((table, name) => table.name === name)
       //      .filterOpt(filter.family)((table, family) => table.family === family)
@@ -79,9 +79,9 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
 
   }
 
-  override def findByFilter(mobileNo: Option[String], email: Option[String]): Future[Option[WebEngageUser]] = {
+  override def findByFilter(mobileNo: Option[String], email: Option[String]): Future[Option[User]] = {
 
-    val query = webEngageUserTable
+    val query = userTable
       //      .filterOpt(filter.user_name)((table, userName) => table.userName === userName)
       //      .filterOpt(filter.name)((table, name) => table.name === name)
       //      .filterOpt(filter.family)((table, family) => table.family === family)
@@ -96,18 +96,18 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
 
   }
 
-  override def save(user: WebEngageUser): Future[WebEngageUser] = {
+  override def save(user: User): Future[User] = {
 
-    val action = webEngageUserTable returning webEngageUserTable.map(_.id) into ((table, id) =>
-      table.copy(id = Some(id))) += WebEngageUser(None, user.userName, user.userId,
+    val action = userTable returning userTable.map(_.id) into ((table, id) =>
+      table.copy(id = Some(id))) += User(None, user.userName, user.userId,
       DateTimeUtils.nowOpt, None, user.name, user.family, user.email, user.mobileNo, user.birthDate, user.gender, user.provider, disabled = user.disabled)
     db.run(action)
 
   }
 
-  override def update(user: WebEngageUser): Future[Boolean] = {
+  override def update(user: User): Future[Boolean] = {
 
-    val action = webEngageUserTable
+    val action = userTable
       .filterOpt(user.email)((table, email) => table.email === email || (table.email.isEmpty && user.mobileNo.isDefined))
       .filterOpt(user.mobileNo)((table, mobileNo) => table.mobileNo === mobileNo || (table.mobileNo.isEmpty && user.email.isDefined))
       .map(x => (x.userName, x.name, x.family, x.email, x.mobileNo, x.birthDate, x.gender, x.modifiedAt, x.disabled))
@@ -120,7 +120,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
 
   override def isDisabled(userName: String): Future[Boolean] = {
 
-    val query = webEngageUserTable
+    val query = userTable
       .filter(_.userName === userName)
       .map(_.disabled)
 
@@ -132,8 +132,8 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
 
 private[repos] trait WebEngageUserTableComponent extends SlickSupport {
 
-  private[WebEngageUserTableComponent] final class WebEngageUserTable(tag: Tag)
-    extends Table[WebEngageUser](tag, "user_webengage") {
+ private[WebEngageUserTableComponent] final class UserTable(tag: Tag)
+    extends Table[User](tag, "user") {
 
     def id: Rep[Long] = column[Long]("id", O.AutoInc, O.PrimaryKey)
 
@@ -163,7 +163,7 @@ private[repos] trait WebEngageUserTableComponent extends SlickSupport {
 
     def deleted: Rep[Boolean] = column[Boolean]("deleted", O.Default(false))
 
-    def * : ProvenShape[WebEngageUser] = (
+    def * : ProvenShape[User] = (
       id.?,
       userName,
       userId,
@@ -177,9 +177,9 @@ private[repos] trait WebEngageUserTableComponent extends SlickSupport {
       gender,
       provider,
       disabled,
-      deleted) <> ((WebEngageUser.apply _).tupled, WebEngageUser.unapply)
+      deleted) <> ((User.apply _).tupled, User.unapply)
   }
 
-  protected val webEngageUserTable = TableQuery[WebEngageUserTable]
+  protected val userTable = TableQuery[UserTable]
 
 }

@@ -49,7 +49,7 @@ private class WebEngageActor(
       WebEngage.trackUser(user.toJson)
         .map {
         case (status, _) if status == StatusCodes.Created =>
-          logger.info(s"""receive user info from webengage status $status""")
+        logger.info(s"""receive user info from webengage status $status""")
           self ? PoisonPill
         case (status, _) if status == StatusCodes.InternalServerError =>
           logger.info(s"""receive user info from webengage status $status""")

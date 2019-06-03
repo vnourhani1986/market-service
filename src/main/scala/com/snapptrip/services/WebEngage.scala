@@ -14,7 +14,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import com.snapptrip.DI.{ec, materializer, system}
 import com.snapptrip.api.Messages.{WebEngageEvent, WebEngageUserInfo, WebEngageUserInfoWithUserId}
-import com.snapptrip.models.WebEngageUser
+import com.snapptrip.models.User
 import com.snapptrip.repos.WebEngageUserRepoImpl
 import com.snapptrip.utils.WebEngageConfig
 import com.snapptrip.webengage.{SendUserInfo, WebengageService}
@@ -101,7 +101,7 @@ object WebEngage extends LazyLogging {
     (for {
       oldUser <- WebEngageUserRepoImpl.findByFilter(request)
       user <- if (oldUser.isDefined) {
-        val webEngageUser = WebEngageUser(
+        val webEngageUser = User(
           userName = request.user_name.orElse(oldUser.get.userName),
           userId = oldUser.get.userId,
           name = request.name.orElse(oldUser.get.name),
@@ -132,7 +132,7 @@ object WebEngage extends LazyLogging {
             Left(new Exception("can not update user data in database"))
         }
       } else {
-        val webEngageUser = WebEngageUser(
+        val webEngageUser = User(
           userName = request.user_name,
           userId = UUID.randomUUID().toString,
           name = request.name,

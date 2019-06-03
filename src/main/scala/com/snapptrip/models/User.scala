@@ -5,7 +5,7 @@ import java.time.{LocalDate, LocalDateTime}
 import com.snapptrip.auth.UserRole
 import com.snapptrip.utils.DateTimeUtils
 
-case class WebEngageUser(
+case class User(
                  id: Option[Long] = None,
                  userName: Option[String] = None,
                  userId: String,
