@@ -1,5 +1,7 @@
 package com.snapptrip.services
 
+import java.time.format.DateTimeFormatter
+import java.time.{LocalDateTime, LocalTime}
 import java.util.UUID
 
 import akka.http.scaladsl.Http
@@ -11,22 +13,23 @@ import akka.pattern.ask
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import com.snapptrip.DI.{ec, materializer, system}
-import com.snapptrip.api.Messages.{WebEngageUserInfo, WebEngageUserInfoWithUserId}
-import com.snapptrip.models.WebEngageUser
+import com.snapptrip.api.Messages.{WebEngageEvent, WebEngageUserInfo, WebEngageUserInfoWithUserId}
+import com.snapptrip.models.User
 import com.snapptrip.repos.WebEngageUserRepoImpl
 import com.snapptrip.utils.WebEngageConfig
 import com.snapptrip.webengage.{SendUserInfo, WebengageService}
 import com.typesafe.scalalogging.LazyLogging
-import spray.json.JsValue
+import spray.json.{JsObject, JsString, JsValue}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.util.Try
 
 object WebEngage extends LazyLogging {
 
   private implicit val timeout: Timeout = Timeout(1.minutes)
 
-  def trackUser(request: JsValue) = {
+  def trackUser(request: JsValue): Future[(StatusCode, ResponseEntity)] = {
     logger.info(s"""request track users to web engage with content:$request""")
     (for {
       body <- Marshal(request).to[RequestEntity]
@@ -45,7 +48,7 @@ object WebEngage extends LazyLogging {
     }
   }
 
-  def trackEvent(request: JsValue) = {
+  def trackEventWithUserId(request: JsValue): Future[(StatusCode, ResponseEntity)] = {
     logger.info(s"""request track events to web engage with content:$request""")
     (for {
       body <- Marshal(request).to[RequestEntity]
@@ -64,11 +67,41 @@ object WebEngage extends LazyLogging {
     }
   }
 
+  def trackEventWithoutUserId(request: WebEngageEvent): Future[(StatusCode, ResponseEntity)] = {
+    logger.info(s"""request track events to web engage with content:$request""")
+    val user = request.user
+    val event = request.event
+    (for {
+      _ <- if (user.email.isEmpty && user.mobile_no.isEmpty) {
+        Future.failed(new Exception("must define one of email or mobile number"))
+      } else {
+        Future.successful("")
+      }
+      user <- WebEngageUserRepoImpl.findByFilter(user.mobile_no, user.email)
+      userId = user.map(_.userId)
+      newRequest <- if (userId.isDefined) {
+        val lContent = JsObject("userId" -> JsString(userId.get)).fields.toList ::: event.asJsObject.fields.filterKeys(x => x != "email" || x != "mobile_no").toList
+        val jContent = JsObject(lContent.toMap)
+        Future.successful(jContent)
+      } else {
+        Future.failed(new Exception("the user is not exists"))
+      }
+      (status, entity) <- trackEventWithUserId(newRequest)
+    } yield {
+      logger.info(s"""response track events to web engage with result:$entity with status: $status""")
+      (status, entity)
+    }).recover {
+      case error: Throwable =>
+        logger.info(s"""response track events to web engage with result:${error.getMessage} with status: ${StatusCodes.InternalServerError}""")
+        (StatusCodes.InternalServerError, null)
+    }
+  }
+
   def userCheck(request: WebEngageUserInfo): Future[(WebEngageUserInfoWithUserId, Boolean)] = {
     (for {
       oldUser <- WebEngageUserRepoImpl.findByFilter(request)
       user <- if (oldUser.isDefined) {
-        val webEngageUser = WebEngageUser(
+        val webEngageUser = User(
           userName = request.user_name.orElse(oldUser.get.userName),
           userId = oldUser.get.userId,
           name = request.name.orElse(oldUser.get.name),
@@ -81,22 +114,25 @@ object WebEngage extends LazyLogging {
         )
         WebEngageUserRepoImpl.update(webEngageUser).map {
           case true =>
+            val birthDate = Try{
+              webEngageUser.birthDate.map(x => LocalDateTime.of(x, LocalTime.of(1, 1, 1, 1)).toString.replace(".","-").concat("0"))
+            }.toOption.flatten
             Right(WebEngageUserInfoWithUserId(
               userId = webEngageUser.userId,
-//              user_name = webEngageUser.userName,
+              //              user_name = webEngageUser.userName,
               firstName = webEngageUser.name,
               lastName = webEngageUser.family,
               email = webEngageUser.email,
               phone = webEngageUser.mobileNo,
-//              birthDate = webEngageUser.birthDate,
+              birthDate = birthDate,
               gender = webEngageUser.gender,
-//              provider = webEngageUser.provider
+              //              provider = webEngageUser.provider
             ))
           case false =>
             Left(new Exception("can not update user data in database"))
         }
       } else {
-        val webEngageUser = WebEngageUser(
+        val webEngageUser = User(
           userName = request.user_name,
           userId = UUID.randomUUID().toString,
           name = request.name,
@@ -107,19 +143,23 @@ object WebEngage extends LazyLogging {
           gender = request.gender,
           provider = request.provider
         )
-        WebEngageUserRepoImpl.save(webEngageUser).map(user =>
+        WebEngageUserRepoImpl.save(webEngageUser).map { user =>
+          val birthDate = Try{
+            user.birthDate.map(x => LocalDateTime.of(x, LocalTime.of(1, 1, 1, 1)).toString.replace(".","-").concat("0"))
+          }.toOption.flatten
           Right(WebEngageUserInfoWithUserId(
             userId = user.userId,
-//            user_name = user.userName,
+            //            user_name = user.userName,
             firstName = user.name,
             lastName = user.family,
             email = user.email,
             phone = user.mobileNo,
-//            birth_date = user.birthDate,
+            birthDate = birthDate,
             gender = user.gender,
-//            provider = user.provider
-          ))
-        )
+            //            provider = user.provider
+          )
+          )
+        }
       }
       _ <- user match {
         case Right(u) => (new WebengageService).actor ? SendUserInfo(u)
@@ -129,7 +169,6 @@ object WebEngage extends LazyLogging {
       (user.right.get, true)
     }).recover {
       case error: Throwable =>
-        println(error.getMessage)
         (WebEngageUserInfoWithUserId(userId = "-1"), false)
     }
   }

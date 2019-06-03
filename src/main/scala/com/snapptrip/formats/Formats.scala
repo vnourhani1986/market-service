@@ -22,7 +22,7 @@ trait FormatsComponent extends JsonProtocol {
   implicit val filterUserFormater = jsonFormat5(FilterUser)
   implicit val newUserFormater = jsonFormat7(NewUser)
   implicit val editUserFormater = jsonFormat7(EditUser)
-  implicit val userFormater = jsonFormat14(WebEngageUser)
+  implicit val userFormater = jsonFormat14(User)
   implicit val userLoginInfoFormat = jsonFormat2(UserLoginInfo)
   implicit val userLoginRequestFormat = jsonFormat3(UserLoginRequest)
   implicit val healthCheckResponseFormatter = jsonFormat4(HealthCheckResponse)
@@ -38,6 +38,8 @@ trait FormatsComponent extends JsonProtocol {
   implicit val webEngageEmailBodyFormat = jsonFormat3(WebEngageEmailBody)
   implicit val webEngageUserInfoFormat = jsonFormat8(WebEngageUserInfo)
   implicit val webEngageUserWithUserIdInfoFormat = jsonFormat7(WebEngageUserInfoWithUserId)
+  implicit val eventUserInfoFormat = jsonFormat2(EventUserInfo)
+  implicit val webEngageEventFormat = jsonFormat2(WebEngageEvent)
 
 }
 

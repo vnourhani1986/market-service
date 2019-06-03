@@ -12,7 +12,7 @@ import scala.concurrent.Future
 object DBSetup extends WebEngageUserTableComponent with LazyLogging {
 
   private val tables = List(
-    webEngageUserTable
+    userTable
   )
 
   def initDbs(): Future[List[Unit]] = {

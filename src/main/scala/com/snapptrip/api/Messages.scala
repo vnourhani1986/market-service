@@ -3,6 +3,7 @@ package com.snapptrip.api
 import java.time.{LocalDate, LocalDateTime}
 
 import com.snapptrip.utils.DateTimeUtils
+import spray.json.JsValue
 
 object Messages {
 
@@ -71,11 +72,13 @@ object Messages {
                                 lastName: Option[String] = None,
                                 email: Option[String] = None,
                                 phone: Option[String] = None,
-                                birthDate: Option[LocalDate] = None,
+                                birthDate: Option[String] = None,
                                 gender: Option[String] = None,
 //                                provider: Option[String] = None,
 
                               )
 
+  case class EventUserInfo(mobile_no: Option[String], email: Option[String])
+  case class WebEngageEvent(user: EventUserInfo, event: JsValue)
 
 }
