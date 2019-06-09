@@ -253,7 +253,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
             }
           }
         } ~
-        path("user" / "add") {
+        path("user" / "register") {
           post {
             entity(as[WebEngageUserInfo]) { body =>
               logger.info(s"""post check user request by body $body""")
