@@ -5,6 +5,7 @@ imagePullSecrets: regsecret
 image: git.pinsvc.net:4567/b2c/market-service/beta
 baseConfig: beta
 ingressClass: b2c-local
+
 extraConfig: ""
 
 service:
