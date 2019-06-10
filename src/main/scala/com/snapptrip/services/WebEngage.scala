@@ -1,9 +1,9 @@
 package com.snapptrip.services
 
-import java.time.format.DateTimeFormatter
 import java.time.{LocalDateTime, LocalTime}
 import java.util.UUID
 
+import akka.actor.ActorRef
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.marshalling.Marshal
@@ -17,7 +17,7 @@ import com.snapptrip.api.Messages.{WebEngageEvent, WebEngageUserInfo, WebEngageU
 import com.snapptrip.models.User
 import com.snapptrip.repos.WebEngageUserRepoImpl
 import com.snapptrip.utils.WebEngageConfig
-import com.snapptrip.webengage.{SendUserInfo, WebengageService}
+import com.snapptrip.webengage.{SendEventInfo, SendUserInfo, WebengageService}
 import com.typesafe.scalalogging.LazyLogging
 import spray.json.{JsObject, JsString, JsValue}
 
@@ -27,7 +27,8 @@ import scala.util.Try
 
 object WebEngage extends LazyLogging {
 
-  private implicit val timeout: Timeout = Timeout(1.minutes)
+  private implicit val timeout: Timeout = Timeout(1.minute)
+  val actor: ActorRef = (new WebengageService).actor
 
   def trackUser(request: JsValue): Future[(StatusCode, ResponseEntity)] = {
     logger.info(s"""request track users to web engage with content:$request""")
@@ -67,8 +68,7 @@ object WebEngage extends LazyLogging {
     }
   }
 
-  def trackEventWithoutUserId(request: WebEngageEvent): Future[(StatusCode, ResponseEntity)] = {
-    logger.info(s"""request track events to web engage with content:$request""")
+  def trackEventWithoutUserId(request: WebEngageEvent): Future[(Boolean, JsObject)] = {
     val user = request.user
     val event = request.event
     (for {
@@ -86,14 +86,12 @@ object WebEngage extends LazyLogging {
       } else {
         Future.failed(new Exception("the user is not exists"))
       }
-      (status, entity) <- trackEventWithUserId(newRequest)
+      _ <- actor ? SendEventInfo(newRequest, 1)
     } yield {
-      logger.info(s"""response track events to web engage with result:$entity with status: $status""")
-      (status, entity)
+      (true, JsObject("status" -> JsString("success")))
     }).recover {
       case error: Throwable =>
-        logger.info(s"""response track events to web engage with result:${error.getMessage} with status: ${StatusCodes.InternalServerError}""")
-        (StatusCodes.InternalServerError, null)
+        (false, JsObject("status" -> JsString("failed")))
     }
   }
 
@@ -101,68 +99,27 @@ object WebEngage extends LazyLogging {
     (for {
       oldUser <- WebEngageUserRepoImpl.findByFilter(request)
       user <- if (oldUser.isDefined) {
-        val webEngageUser = User(
-          userName = request.user_name.orElse(oldUser.get.userName),
-          userId = oldUser.get.userId,
-          name = request.name.orElse(oldUser.get.name),
-          family = request.family.orElse(oldUser.get.family),
-          email = request.email.orElse(oldUser.get.email),
-          mobileNo = request.mobile_no.orElse(oldUser.get.mobileNo),
-          birthDate = request.birth_date.orElse(oldUser.get.birthDate),
-          gender = request.gender.orElse(oldUser.get.gender),
-          provider = request.gender.orElse(oldUser.get.provider)
-        )
+        val webEngageUser = converter(request, oldUser)
         WebEngageUserRepoImpl.update(webEngageUser).map {
           case true =>
-            val birthDate = Try{
-              webEngageUser.birthDate.map(x => LocalDateTime.of(x, LocalTime.of(1, 1, 1, 1)).toString.replace(".","-").concat("0"))
+            val birthDate = Try {
+              webEngageUser.birthDate.map(x => LocalDateTime.of(x, LocalTime.of(1, 1, 1, 1)).toString.replace(".", "-").concat("0"))
             }.toOption.flatten
-            Right(WebEngageUserInfoWithUserId(
-              userId = webEngageUser.userId,
-              //              user_name = webEngageUser.userName,
-              firstName = webEngageUser.name,
-              lastName = webEngageUser.family,
-              email = webEngageUser.email,
-              phone = webEngageUser.mobileNo,
-              birthDate = birthDate,
-              gender = webEngageUser.gender,
-              //              provider = webEngageUser.provider
-            ))
+            Right(converter(webEngageUser, birthDate))
           case false =>
             Left(new Exception("can not update user data in database"))
         }
       } else {
-        val webEngageUser = User(
-          userName = request.user_name,
-          userId = UUID.randomUUID().toString,
-          name = request.name,
-          family = request.family,
-          email = request.email,
-          mobileNo = request.mobile_no,
-          birthDate = request.birth_date,
-          gender = request.gender,
-          provider = request.provider
-        )
+        val webEngageUser = converter(request)
         WebEngageUserRepoImpl.save(webEngageUser).map { user =>
-          val birthDate = Try{
-            user.birthDate.map(x => LocalDateTime.of(x, LocalTime.of(1, 1, 1, 1)).toString.replace(".","-").concat("0"))
+          val birthDate = Try {
+            user.birthDate.map(x => LocalDateTime.of(x, LocalTime.of(1, 1, 1, 1)).toString.replace(".", "-").concat("0"))
           }.toOption.flatten
-          Right(WebEngageUserInfoWithUserId(
-            userId = user.userId,
-            //            user_name = user.userName,
-            firstName = user.name,
-            lastName = user.family,
-            email = user.email,
-            phone = user.mobileNo,
-            birthDate = birthDate,
-            gender = user.gender,
-            //            provider = user.provider
-          )
-          )
+          Right(converter(webEngageUser, birthDate))
         }
       }
       _ <- user match {
-        case Right(u) => (new WebengageService).actor ? SendUserInfo(u)
+        case Right(u) => actor ? SendUserInfo(u, 1)
         case Left(e) => Future.failed(e)
       }
     } yield {
@@ -171,6 +128,48 @@ object WebEngage extends LazyLogging {
       case error: Throwable =>
         (WebEngageUserInfoWithUserId(userId = "-1"), false)
     }
+  }
+
+  def converter(webEngageUserInfo: WebEngageUserInfo): User = {
+    User(
+      userName = webEngageUserInfo.user_name,
+      userId = UUID.randomUUID().toString,
+      name = webEngageUserInfo.name,
+      family = webEngageUserInfo.family,
+      email = webEngageUserInfo.email,
+      mobileNo = webEngageUserInfo.mobile_no,
+      birthDate = webEngageUserInfo.birth_date,
+      gender = webEngageUserInfo.gender,
+      provider = webEngageUserInfo.provider
+    )
+  }
+
+  def converter(webEngageUserInfo: WebEngageUserInfo, oldUser: Option[User]): User = {
+    User(
+      userName = webEngageUserInfo.user_name.orElse(oldUser.get.userName),
+      userId = oldUser.get.userId,
+      name = webEngageUserInfo.name.orElse(oldUser.get.name),
+      family = webEngageUserInfo.family.orElse(oldUser.get.family),
+      email = webEngageUserInfo.email.orElse(oldUser.get.email),
+      mobileNo = webEngageUserInfo.mobile_no.orElse(oldUser.get.mobileNo),
+      birthDate = webEngageUserInfo.birth_date.orElse(oldUser.get.birthDate),
+      gender = webEngageUserInfo.gender.orElse(oldUser.get.gender),
+      provider = webEngageUserInfo.gender.orElse(oldUser.get.provider)
+    )
+  }
+
+  def converter(user: User, birthDate: Option[String]): WebEngageUserInfoWithUserId = {
+    WebEngageUserInfoWithUserId(
+      userId = user.userId,
+      //              user_name = webEngageUser.userName,
+      firstName = user.name,
+      lastName = user.family,
+      email = user.email,
+      phone = user.mobileNo,
+      birthDate = birthDate,
+      gender = user.gender,
+      //              provider = webEngageUser.provider
+    )
   }
 
 }

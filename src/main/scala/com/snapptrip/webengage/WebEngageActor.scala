@@ -1,20 +1,19 @@
 package com.snapptrip.webengage
 
-import akka.actor.{Actor, ActorSystem, Cancellable, PoisonPill, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, Props}
 import akka.http.scaladsl.model.StatusCodes
 import akka.pattern.ask
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
-import com.snapptrip.api.Messages.{WebEngageUserInfo, WebEngageUserInfoWithUserId}
+import com.snapptrip.api.Messages.WebEngageUserInfoWithUserId
 import com.snapptrip.formats.Formats._
 import com.snapptrip.services.WebEngage
 import com.typesafe.scalalogging.LazyLogging
 import spray.json._
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{FiniteDuration, _}
 import scala.util.Random
-import scala.concurrent.duration._
 
 class WebengageService(
                         implicit
@@ -25,11 +24,13 @@ class WebengageService(
                       ) {
 
   val props = Props(new WebEngageActor)
-  val actor = system.actorOf(props, s"WebengageActor-${Random.nextInt}")
+  val actor: ActorRef = system.actorOf(props, s"WebengageActor-${Random.nextInt}")
 
 }
 
-case class SendUserInfo(user: WebEngageUserInfoWithUserId)
+case class SendUserInfo(user: WebEngageUserInfoWithUserId, retryCount: Int)
+
+case class SendEventInfo(event: JsValue, retryCount: Int)
 
 private class WebEngageActor(
                               implicit
@@ -38,39 +39,65 @@ private class WebEngageActor(
                               timeout: Timeout
                             ) extends Actor with LazyLogging {
 
-  var retryCount = 1
   val retryStep = 10
+  val retryMax = 5
 
   override def receive(): Receive = {
 
-    case SendUserInfo(user) =>
-      logger.info(s"""send user info to webengage retry for $retryCount""")
-      sender ? JsObject("status" -> JsString("success"))
+    case SendUserInfo(user, retryCount) =>
+      logger.info(s"""send user info actor to webengage retry for $retryCount""")
+      if (sender != self) sender ? (200, JsObject("status" -> JsString("success")))
       WebEngage.trackUser(user.toJson)
         .map {
-        case (status, _) if status == StatusCodes.Created =>
-        logger.info(s"""receive user info from webengage status $status""")
-          self ? PoisonPill
-        case (status, _) if status == StatusCodes.InternalServerError =>
-          logger.info(s"""receive user info from webengage status $status""")
-          retryCount += 1
-          retry(user, (retryCount * retryStep).second)
-        case _ =>
-          logger.info(s"""receive user info from webengage with invalid response""")
-          retryCount += 1
-          retry(user, (retryCount * retryStep).second)
-      }
+          case (status, _) if status == StatusCodes.Created =>
+            logger.info(s"""receive user info actor from webengage status $status""")
+          case (status, _) if status == StatusCodes.InternalServerError =>
+            logger.info(s"""receive user info from webengage status $status""")
+            if (retryCount < retryMax) {
+              val rt = retryCount + 1
+              retry(user, (retryCount * retryStep).second, rt)
+            }
+          case _ =>
+            logger.info(s"""receive user info actor from webengage with invalid response""")
+            if (retryCount < retryMax) {
+              val rt = retryCount + 1
+              retry(user, (retryCount * retryStep).second, rt)
+            }
+        }
+
+    case SendEventInfo(event, retryCount) =>
+      logger.info(s"""send event info actor to webengage retry for $retryCount""")
+      if (sender != self) sender ? (200, JsObject("status" -> JsString("success")))
+      WebEngage.trackEventWithUserId(event)
+        .map {
+          case (status, _) if status == StatusCodes.Created =>
+            logger.info(s"""receive event info actor from webengage status $status""")
+          case (status, _) if status == StatusCodes.InternalServerError =>
+            logger.info(s"""receive event info actor from webengage status $status""")
+            if (retryCount < retryMax) {
+              val rt = retryCount + 1
+              retry(event, (retryCount * retryStep).second, rt)
+            }
+          case _ =>
+            logger.info(s"""receive event info actor from webengage with invalid response""")
+            if (retryCount < retryMax) {
+              val rt = retryCount + 1
+              retry(event, (retryCount * retryStep).second, rt)
+            }
+        }
 
     case _ =>
       logger.info(s"""other messages""")
       sender ? JsObject("status" -> JsString("success"))
-      self ? PoisonPill
 
   }
 
-  def retry(issueRequest: WebEngageUserInfoWithUserId, time: FiniteDuration): Cancellable = {
-    context.system.scheduler.scheduleOnce(time, self, SendUserInfo(issueRequest))
+  def retry(issueRequest: WebEngageUserInfoWithUserId, time: FiniteDuration, retryCount: Int): Cancellable = {
+    context.system.scheduler.scheduleOnce(time, self, SendUserInfo(issueRequest, retryCount))
   }
 
+  def retry(issueRequest: JsValue, time: FiniteDuration, retryCount: Int): Cancellable = {
+    context.system.scheduler.scheduleOnce(time, self, SendEventInfo(issueRequest, retryCount))
+  }
 
 }

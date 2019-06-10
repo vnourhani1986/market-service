@@ -132,7 +132,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
 
 private[repos] trait WebEngageUserTableComponent extends SlickSupport {
 
- private[WebEngageUserTableComponent] final class UserTable(tag: Tag)
+  private[WebEngageUserTableComponent] final class UserTable(tag: Tag)
     extends Table[User](tag, "user") {
 
     def id: Rep[Long] = column[Long]("id", O.AutoInc, O.PrimaryKey)

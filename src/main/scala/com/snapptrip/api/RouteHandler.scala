@@ -134,15 +134,14 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
             entity(as[WebEngageEvent]) { body =>
               logger.info(s"""post events request by body $body""")
               onSuccess(WebEngage.trackEventWithoutUserId(body)) {
-                case (status, entity) if status == StatusCodes.Created =>
+                case (status, entity) if status =>
                   logger.info(s"""post events response by result: $entity and status: $status""")
-                  complete(HttpResponse(status = status).withEntity(entity))
-                case (status, _) if status == StatusCodes.InternalServerError =>
+                  val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
+                  complete(HttpResponse(status = StatusCodes.Created).withEntity(httpEntity))
+                case (status, entity) if !status =>
                   logger.info(s"""post events response by result: server error and status: $status""")
-                  complete(HttpResponse(status = status))
-                case (status, entity) =>
-                  logger.info(s"""post events response by result: $entity and status: $status""")
-                  complete(HttpResponse(status = status).withEntity(entity))
+                  val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
+                  complete(HttpResponse(status = StatusCodes.InternalServerError).withEntity(httpEntity))
               }
             }
           }
@@ -254,7 +253,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
             }
           }
         } ~
-        path("user" / "add") {
+        path("user" / "register") {
           post {
             entity(as[WebEngageUserInfo]) { body =>
               logger.info(s"""post check user request by body $body""")
