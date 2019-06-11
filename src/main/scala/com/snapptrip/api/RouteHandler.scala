@@ -220,7 +220,17 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
         } ~
         path("user" / "check") {
           post {
-            entity(as[WebEngageUserInfo]) { body =>
+            entity(as[WebEngageUserInfo]) { body1 =>
+              val body = WebEngageUserInfo(
+                user_name = body1.user_name,
+                name = body1.name,
+                family = body1.family,
+                email = body1.email,
+                mobile_no = body1.mobile_no.map(format),
+                birth_date = body1.birth_date,
+                gender = body1.gender,
+                provider = body1.provider
+              )
               logger.info(s"""post check user request by body $body""")
               if (body.email.isEmpty && body.mobile_no.isEmpty) {
                 logger.info(s"""post check user response by result: server error and status: 400""")
@@ -255,7 +265,18 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
         } ~
         path("user" / "register") {
           post {
-            entity(as[WebEngageUserInfo]) { body =>
+            entity(as[WebEngageUserInfo]) { body1 =>
+              val body = WebEngageUserInfo(
+                user_name = body1.user_name,
+                name = body1.name,
+                family = body1.family,
+                email = body1.email,
+                mobile_no = body1.mobile_no.map(format),
+                birth_date = body1.birth_date,
+                gender = body1.gender,
+                provider = body1.provider
+              )
+              body.mobile_no.map(format)
               logger.info(s"""post check user request by body $body""")
               if (body.email.isEmpty && body.mobile_no.isEmpty) {
                 logger.info(s"""post check user response by result: server error and status: 400""")

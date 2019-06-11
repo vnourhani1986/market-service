@@ -154,21 +154,21 @@ object WebEngage extends LazyLogging {
       mobileNo = webEngageUserInfo.mobile_no.orElse(oldUser.get.mobileNo),
       birthDate = webEngageUserInfo.birth_date.orElse(oldUser.get.birthDate),
       gender = webEngageUserInfo.gender.orElse(oldUser.get.gender),
-      provider = webEngageUserInfo.gender.orElse(oldUser.get.provider)
+      provider = webEngageUserInfo.provider.orElse(oldUser.get.provider)
     )
   }
 
   def converter(user: User, birthDate: Option[String]): WebEngageUserInfoWithUserId = {
     WebEngageUserInfoWithUserId(
       userId = user.userId,
-      //              user_name = webEngageUser.userName,
+//      user_name = user.userName,
       firstName = user.name,
       lastName = user.family,
       email = user.email,
       phone = user.mobileNo,
       birthDate = birthDate,
       gender = user.gender,
-      //              provider = webEngageUser.provider
+//      provider = user.provider
     )
   }
 
