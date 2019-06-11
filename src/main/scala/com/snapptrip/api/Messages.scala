@@ -61,7 +61,9 @@ object Messages {
                                 birth_date: Option[LocalDate] = None,
                                 gender: Option[String] = None,
                                 provider: Option[String] = None
-                              )
+                              ) {
+    mobile_no.map(format)
+  }
 
   case class WebEngageUserAttributes(Age: String)
 
@@ -76,9 +78,19 @@ object Messages {
                                 gender: Option[String] = None,
 //                                provider: Option[String] = None,
 
-                              )
+                              ) {
+    phone.map(format)
+  }
 
-  case class EventUserInfo(mobile_no: Option[String], email: Option[String])
+  case class EventUserInfo(mobile_no: Option[String], email: Option[String]) {
+    mobile_no.map(format)
+  }
   case class WebEngageEvent(user: EventUserInfo, event: JsValue)
+
+  val formats = List(("""[0][9][0-9][0-9]{8,8}""", 1), ("""[+][9][8][9][0-9][0-9]{8,8}""", 3))
+
+  def format(mobileNo: String) = {
+    formats.map(x => (mobileNo.matches(x._1), x)).find(_._1).map(_._2._2).map(mobileNo.substring).getOrElse(mobileNo)
+  }
 
 }
