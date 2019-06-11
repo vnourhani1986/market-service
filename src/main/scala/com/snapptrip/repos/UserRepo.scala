@@ -110,9 +110,9 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
     val action = userTable
       .filterOpt(user.email)((table, email) => table.email === email || (table.email.isEmpty && user.mobileNo.isDefined))
       .filterOpt(user.mobileNo)((table, mobileNo) => table.mobileNo === mobileNo || (table.mobileNo.isEmpty && user.email.isDefined))
-      .map(x => (x.userName, x.name, x.family, x.email, x.mobileNo, x.birthDate, x.gender, x.modifiedAt, x.disabled))
+      .map(x => (x.userName, x.name, x.family, x.email, x.mobileNo, x.birthDate, x.gender, x.modifiedAt, x.disabled, x.provider))
       .update((user.userName, user.name, user.family, user.email, user.mobileNo, user.birthDate, user.gender, DateTimeUtils.nowOpt,
-        user.disabled))
+        user.disabled, user.provider))
 
     db.run(action).map(_ > 0)
 

@@ -2,7 +2,6 @@ package com.snapptrip.api
 
 import java.time.LocalDate
 
-import com.snapptrip.api.Messages.WebEngageUserInfoWithUserId
 import spray.json.JsValue
 
 object Messages {
@@ -69,14 +68,14 @@ object Messages {
 
   case class WebEngageUserInfoWithUserId(
                                           userId: String,
-                                          //                                user_name: Option[String] = None,
+//                                          user_name: Option[String] = None,
                                           firstName: Option[String] = None,
                                           lastName: Option[String] = None,
                                           email: Option[String] = None,
                                           var phone: Option[String] = None,
                                           birthDate: Option[String] = None,
                                           gender: Option[String] = None,
-                                          //                                provider: Option[String] = None,
+//                                          provider: Option[String] = None,
 
                                         ) {
     phone = phone.map(format)
