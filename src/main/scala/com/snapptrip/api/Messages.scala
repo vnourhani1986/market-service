@@ -1,8 +1,8 @@
 package com.snapptrip.api
 
-import java.time.{LocalDate, LocalDateTime}
+import java.time.LocalDate
 
-import com.snapptrip.utils.DateTimeUtils
+import com.snapptrip.api.Messages.WebEngageUserInfoWithUserId
 import spray.json.JsValue
 
 object Messages {
@@ -57,7 +57,7 @@ object Messages {
                                 name: Option[String] = None,
                                 family: Option[String] = None,
                                 email: Option[String] = None,
-                                mobile_no: Option[String] = None,
+                                var mobile_no: Option[String] = None,
                                 birth_date: Option[LocalDate] = None,
                                 gender: Option[String] = None,
                                 provider: Option[String] = None
@@ -68,23 +68,24 @@ object Messages {
   case class WebEngageUserAttributes(Age: String)
 
   case class WebEngageUserInfoWithUserId(
-                                userId: String,
-//                                user_name: Option[String] = None,
-                                firstName: Option[String] = None,
-                                lastName: Option[String] = None,
-                                email: Option[String] = None,
-                                phone: Option[String] = None,
-                                birthDate: Option[String] = None,
-                                gender: Option[String] = None,
-//                                provider: Option[String] = None,
+                                          userId: String,
+                                          //                                user_name: Option[String] = None,
+                                          firstName: Option[String] = None,
+                                          lastName: Option[String] = None,
+                                          email: Option[String] = None,
+                                          var phone: Option[String] = None,
+                                          birthDate: Option[String] = None,
+                                          gender: Option[String] = None,
+                                          //                                provider: Option[String] = None,
 
-                              ) {
-    phone.map(format)
+                                        ) {
+    phone = phone.map(format)
   }
 
-  case class EventUserInfo(mobile_no: Option[String], email: Option[String]) {
+  case class EventUserInfo(var mobile_no: Option[String], email: Option[String]) {
     mobile_no.map(format)
   }
+
   case class WebEngageEvent(user: EventUserInfo, event: JsValue)
 
   val formats = List(("""[0][9][0-9][0-9]{8,8}""", 1), ("""[+][9][8][9][0-9][0-9]{8,8}""", 3))
