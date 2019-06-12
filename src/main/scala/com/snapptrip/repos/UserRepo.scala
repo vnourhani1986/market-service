@@ -67,9 +67,9 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
     val query = userTable
       //      .filterOpt(filter.user_name)((table, userName) => table.userName === userName)
       //      .filterOpt(filter.name)((table, name) => table.name === name)
-      //      .filterOpt(filter.family)((table, family) => table.family === family)
-      .filterOpt(filter.email)((table, email) => table.email === email || (table.email.isEmpty && filter.mobile_no.isDefined))
-      .filterOpt(filter.mobile_no)((table, mobileNo) => table.mobileNo === mobileNo || (table.mobileNo.isEmpty && filter.email.isDefined))
+//            .filterOpt(filter.family)((table, family) => table.family === family)
+      .filterOpt(filter.email)((table, email) => table.email === email || (table.email.isEmpty && table.mobileNo.isDefined))
+      .filterOpt(filter.mobile_no)((table, mobileNo) => table.mobileNo === mobileNo || (table.mobileNo.isEmpty && table.email.isDefined))
       //      .filterOpt(filter.birth_date)((table, birthDate) => table.birthDate === birthDate)
       //      .filterOpt(filter.gender)((table, gender) => table.gender === gender)
       .result
@@ -85,8 +85,8 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
       //      .filterOpt(filter.user_name)((table, userName) => table.userName === userName)
       //      .filterOpt(filter.name)((table, name) => table.name === name)
       //      .filterOpt(filter.family)((table, family) => table.family === family)
-      .filterOpt(email)((table, email) => table.email === email || (table.email.isEmpty && mobileNo.isDefined))
-      .filterOpt(mobileNo)((table, mobileNo) => table.mobileNo === mobileNo || (table.mobileNo.isEmpty && email.isDefined))
+      .filterOpt(email)((table, email) => table.email === email || (table.email.isEmpty && table.mobileNo.isDefined))
+      .filterOpt(mobileNo)((table, mobileNo) => table.mobileNo === mobileNo || (table.mobileNo.isEmpty && table.email.isDefined))
       //      .filterOpt(filter.birth_date)((table, birthDate) => table.birthDate === birthDate)
       //      .filterOpt(filter.gender)((table, gender) => table.gender === gender)
       .result
