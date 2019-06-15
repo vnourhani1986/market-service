@@ -14,8 +14,10 @@ import com.snapptrip.notification.email.EmailService
 import com.snapptrip.notification.sms.SmsService
 import com.snapptrip.repos.BusinessRepoImpl
 import com.snapptrip.services.WebEngage
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import spray.json.{JsNumber, JsObject, JsString, JsValue}
+import com.snapptrip.DI._
 
 import scala.concurrent.ExecutionContextExecutor
 
@@ -25,9 +27,11 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
 
   implicit def executionContext: ExecutionContextExecutor = system.dispatcher
 
+  val token: String = config.getString("web-engage.token")
+
   def routs: Route =
 
-    HealthCheckHandler.route ~ AuthHandler.routes ~ webEngageApi ~
+    HealthCheckHandler.route ~ AuthHandler.routes ~ webEngageApi(token) ~
       AuthHandler.authenticated { (userInfo, channel) =>
         userValidator(userInfo => userInfo.role == UserRole.ADMIN, userInfo) { userInfo =>
           users(userInfo)
@@ -108,200 +112,212 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
     }
   }
 
-  def webEngageApi: Route = {
+  def webEngageApi(token: String): Route = {
 
     pathPrefix("api" / "v1" / "webengage") {
       path("users") {
         post {
-          entity(as[JsValue]) { body =>
-            logger.info(s"""post users request by body $body""")
-            onSuccess(WebEngage.trackUser(body)) {
-              case (status, entity) if status == StatusCodes.Created =>
-                logger.info(s"""post users response by result: $entity and status: $status""")
-                complete(HttpResponse(status = status).withEntity(entity))
-              case (status, _) if status == StatusCodes.InternalServerError =>
-                logger.info(s"""post users response by result: server error and status: $status""")
-                complete(HttpResponse(status = status))
-              case (status, entity) =>
-                logger.info(s"""post users response by result: $entity and status: $status""")
-                complete(HttpResponse(status = status).withEntity(entity))
+          headerValue(extractToken(token)) { _ =>
+            entity(as[JsValue]) { body =>
+              logger.info(s"""post users request by body $body""")
+              onSuccess(WebEngage.trackUser(body)) {
+                case (status, entity) if status == StatusCodes.Created =>
+                  logger.info(s"""post users response by result: $entity and status: $status""")
+                  complete(HttpResponse(status = status).withEntity(entity))
+                case (status, _) if status == StatusCodes.InternalServerError =>
+                  logger.info(s"""post users response by result: server error and status: $status""")
+                  complete(HttpResponse(status = status))
+                case (status, entity) =>
+                  logger.info(s"""post users response by result: $entity and status: $status""")
+                  complete(HttpResponse(status = status).withEntity(entity))
+              }
             }
           }
         }
       } ~
         path("events") {
           post {
-            entity(as[WebEngageEvent]) { body =>
-              logger.info(s"""post events request by body $body""")
-              onSuccess(WebEngage.trackEventWithoutUserId(body)) {
-                case (status, entity) if status =>
-                  logger.info(s"""post events response by result: $entity and status: $status""")
-                  val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
-                  complete(HttpResponse(status = StatusCodes.Created).withEntity(httpEntity))
-                case (status, entity) if !status =>
-                  logger.info(s"""post events response by result: server error and status: $status""")
-                  val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
-                  complete(HttpResponse(status = StatusCodes.InternalServerError).withEntity(httpEntity))
-              }
-            }
-          }
-        } ~
-        path("sms") {
-          post {
-            entity(as[WebEngageSMSBody]) { body =>
-              logger.info(s"""post sms request by body $body""")
-              onSuccess(SmsService.sendSMS(List(body.smsData.toNumber), body.smsData.body)) {
-                case status if status == StatusCodes.OK =>
-                  logger.info(s"""post sms response by status: $status""")
-                  val entity = JsObject(
-                    "status" -> JsString("sms_accepted")
-                  ).toString
-                  val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
-                  complete(HttpResponse(status = status).withEntity(httpEntity))
-                case status if status == StatusCodes.InternalServerError =>
-                  logger.info(s"""post email response by result: server error and status: $status""")
-                  val entity = JsObject(
-                    "status" -> JsString("sms_rejected"),
-                    "statusCode" -> JsNumber(9988), // unknown error
-                    "message" -> JsString("server_error")
-                  ).toString
-                  val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
-                  complete(HttpResponse(status = StatusCodes.OK).withEntity(httpEntity))
-                case status =>
-                  logger.info(s"""post email response by status: $status""")
-                  val entity = JsObject(
-                    "status" -> JsString("sms_rejected"),
-                    "statusCode" -> JsNumber(9988), // unknown error
-                    "message" -> JsString("server_error")
-                  ).toString
-                  complete(HttpResponse(status = status).withEntity(entity))
-              }
-            }
-          }
-        } ~
-        path("email") {
-          post {
-            entity(as[WebEngageEmailBody]) { body =>
-              logger.info(s"""post email request by body $body""")
-              onSuccess(EmailService.sendEmail(body.email.subject,
-                body.email.text,
-                body.email.recipients.to.head.email,
-                body.email.fromName,
-                None)) {
-                case status if status == StatusCodes.OK =>
-                  logger.info(s"""post email response by status: $status""")
-                  val entity = JsObject(
-                    "status" -> JsString("SUCCESS"),
-                    "statusCode" -> JsNumber(1000),
-                    "message" -> JsString("NA")
-                  ).toString
-                  val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
-                  complete(HttpResponse(status = status).withEntity(httpEntity))
-                case status if status == StatusCodes.InternalServerError =>
-                  logger.info(s"""post email response by result: server error and status: $status""")
-                  val entity = JsObject(
-                    "status" -> JsString("ERROR"),
-                    "statusCode" -> JsNumber(9999), // unknown error
-                    "message" -> JsString("server_error")
-                  ).toString
-                  val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
-                  complete(HttpResponse(status = StatusCodes.OK).withEntity(httpEntity))
-                case status =>
-                  logger.info(s"""post email response by status: $status""")
-                  val entity = JsObject(
-                    "status" -> JsString("ERROR"),
-                    "statusCode" -> JsNumber(9999), // unknown error
-                    "message" -> JsString("server_error")
-                  ).toString
-                  complete(HttpResponse(status = status).withEntity(entity))
-              }
-            }
-          }
-        } ~
-        path("user" / "check") {
-          post {
-            entity(as[WebEngageUserInfo]) { body1 =>
-              val body = WebEngageUserInfo(
-                user_name = body1.user_name,
-                name = body1.name,
-                family = body1.family,
-                email = body1.email,
-                mobile_no = body1.mobile_no.map(format),
-                birth_date = body1.birth_date,
-                gender = body1.gender,
-                provider = body1.provider
-              )
-              logger.info(s"""post check user request by body $body""")
-              if (body.email.isEmpty && body.mobile_no.isEmpty) {
-                logger.info(s"""post check user response by result: server error and status: 400""")
-                val entity = JsObject(
-                  "status" -> JsString("ERROR"),
-                  "user_id" -> JsString("-1")
-                ).toString
-                val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
-                complete(HttpResponse(status = StatusCodes.BadRequest).withEntity(httpEntity))
-              } else {
-                onSuccess(WebEngage.userCheck(body)) {
-                  case (user, status) if status =>
-                    logger.info(s"""post check user response by status: 200""")
-                    val entity = JsObject(
-                      "status" -> JsString("SUCCESS"),
-                      "user_id" -> JsString(user.userId),
-                    ).toString
-                    val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
-                    complete(HttpResponse(status = StatusCodes.OK).withEntity(httpEntity))
-                  case (_, _) =>
-                    logger.info(s"""post check user response by result: server error and status: 500""")
-                    val entity = JsObject(
-                      "status" -> JsString("ERROR"),
-                      "user_id" -> JsString("-1")
-                    ).toString
-                    val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
+            headerValue(extractToken(token)) { _ =>
+              entity(as[WebEngageEvent]) { body =>
+                logger.info(s"""post events request by body $body""")
+                onSuccess(WebEngage.trackEventWithoutUserId(body)) {
+                  case (status, entity) if status =>
+                    logger.info(s"""post events response by result: $entity and status: $status""")
+                    val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
+                    complete(HttpResponse(status = StatusCodes.Created).withEntity(httpEntity))
+                  case (status, entity) if !status =>
+                    logger.info(s"""post events response by result: server error and status: $status""")
+                    val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
                     complete(HttpResponse(status = StatusCodes.InternalServerError).withEntity(httpEntity))
                 }
               }
             }
           }
         } ~
-        path("user" / "register") {
+        path("sms") {
           post {
-            entity(as[WebEngageUserInfo]) { body1 =>
-              val body = WebEngageUserInfo(
-                user_name = body1.user_name,
-                name = body1.name,
-                family = body1.family,
-                email = body1.email,
-                mobile_no = body1.mobile_no.map(format),
-                birth_date = body1.birth_date,
-                gender = body1.gender,
-                provider = body1.provider
-              )
-              body.mobile_no.map(format)
-              logger.info(s"""post check user request by body $body""")
-              if (body.email.isEmpty && body.mobile_no.isEmpty) {
-                logger.info(s"""post check user response by result: server error and status: 400""")
-                val entity = JsObject(
-                  "status" -> JsString("ERROR"),
-                  "user_id" -> JsString("-1")
-                ).toString
-                val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
-                complete(HttpResponse(status = StatusCodes.BadRequest).withEntity(httpEntity))
-              } else {
-                onSuccess(WebEngage.userCheck(body)) {
-                  case (_, status) if status =>
-                    logger.info(s"""post check user response by status: 200""")
+            headerValue(extractToken(token)) { _ =>
+              entity(as[WebEngageSMSBody]) { body =>
+                logger.info(s"""post sms request by body $body""")
+                onSuccess(SmsService.sendSMS(List(body.smsData.toNumber), body.smsData.body)) {
+                  case status if status == StatusCodes.OK =>
+                    logger.info(s"""post sms response by status: $status""")
                     val entity = JsObject(
-                      "status" -> JsString("SUCCESS")
+                      "status" -> JsString("sms_accepted")
+                    ).toString
+                    val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
+                    complete(HttpResponse(status = status).withEntity(httpEntity))
+                  case status if status == StatusCodes.InternalServerError =>
+                    logger.info(s"""post email response by result: server error and status: $status""")
+                    val entity = JsObject(
+                      "status" -> JsString("sms_rejected"),
+                      "statusCode" -> JsNumber(9988), // unknown error
+                      "message" -> JsString("server_error")
                     ).toString
                     val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
                     complete(HttpResponse(status = StatusCodes.OK).withEntity(httpEntity))
-                  case (_, _) =>
-                    logger.info(s"""post check user response by result: server error and status: 500""")
+                  case status =>
+                    logger.info(s"""post email response by status: $status""")
                     val entity = JsObject(
-                      "status" -> JsString("ERROR")
+                      "status" -> JsString("sms_rejected"),
+                      "statusCode" -> JsNumber(9988), // unknown error
+                      "message" -> JsString("server_error")
+                    ).toString
+                    complete(HttpResponse(status = status).withEntity(entity))
+                }
+              }
+            }
+          }
+        } ~
+        path("email") {
+          post {
+            headerValue(extractToken(token)) { _ =>
+              entity(as[WebEngageEmailBody]) { body =>
+                logger.info(s"""post email request by body $body""")
+                onSuccess(EmailService.sendEmail(body.email.subject,
+                  body.email.text,
+                  body.email.recipients.to.head.email,
+                  body.email.fromName,
+                  None)) {
+                  case status if status == StatusCodes.OK =>
+                    logger.info(s"""post email response by status: $status""")
+                    val entity = JsObject(
+                      "status" -> JsString("SUCCESS"),
+                      "statusCode" -> JsNumber(1000),
+                      "message" -> JsString("NA")
                     ).toString
                     val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
-                    complete(HttpResponse(status = StatusCodes.InternalServerError).withEntity(httpEntity))
+                    complete(HttpResponse(status = status).withEntity(httpEntity))
+                  case status if status == StatusCodes.InternalServerError =>
+                    logger.info(s"""post email response by result: server error and status: $status""")
+                    val entity = JsObject(
+                      "status" -> JsString("ERROR"),
+                      "statusCode" -> JsNumber(9999), // unknown error
+                      "message" -> JsString("server_error")
+                    ).toString
+                    val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
+                    complete(HttpResponse(status = StatusCodes.OK).withEntity(httpEntity))
+                  case status =>
+                    logger.info(s"""post email response by status: $status""")
+                    val entity = JsObject(
+                      "status" -> JsString("ERROR"),
+                      "statusCode" -> JsNumber(9999), // unknown error
+                      "message" -> JsString("server_error")
+                    ).toString
+                    complete(HttpResponse(status = status).withEntity(entity))
+                }
+              }
+            }
+          }
+        } ~
+        path("user" / "check") {
+          post {
+            headerValue(extractToken(token)) { _ =>
+              entity(as[WebEngageUserInfo]) { body1 =>
+                val body = WebEngageUserInfo(
+                  user_name = body1.user_name,
+                  name = body1.name,
+                  family = body1.family,
+                  email = body1.email,
+                  mobile_no = body1.mobile_no.map(format),
+                  birth_date = body1.birth_date,
+                  gender = body1.gender,
+                  provider = body1.provider
+                )
+                logger.info(s"""post check user request by body $body""")
+                if (body.email.isEmpty && body.mobile_no.isEmpty) {
+                  logger.info(s"""post check user response by result: server error and status: 400""")
+                  val entity = JsObject(
+                    "status" -> JsString("ERROR"),
+                    "user_id" -> JsString("-1")
+                  ).toString
+                  val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
+                  complete(HttpResponse(status = StatusCodes.BadRequest).withEntity(httpEntity))
+                } else {
+                  onSuccess(WebEngage.userCheck(body)) {
+                    case (user, status) if status =>
+                      logger.info(s"""post check user response by status: 200""")
+                      val entity = JsObject(
+                        "status" -> JsString("SUCCESS"),
+                        "user_id" -> JsString(user.userId),
+                      ).toString
+                      val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
+                      complete(HttpResponse(status = StatusCodes.OK).withEntity(httpEntity))
+                    case (_, _) =>
+                      logger.info(s"""post check user response by result: server error and status: 500""")
+                      val entity = JsObject(
+                        "status" -> JsString("ERROR"),
+                        "user_id" -> JsString("-1")
+                      ).toString
+                      val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
+                      complete(HttpResponse(status = StatusCodes.InternalServerError).withEntity(httpEntity))
+                  }
+                }
+              }
+            }
+          }
+        } ~
+        path("user" / "register") {
+          headerValue(extractToken(token)) { _ =>
+            post {
+              entity(as[WebEngageUserInfo]) { body1 =>
+                val body = WebEngageUserInfo(
+                  user_name = body1.user_name,
+                  name = body1.name,
+                  family = body1.family,
+                  email = body1.email,
+                  mobile_no = body1.mobile_no.map(format),
+                  birth_date = body1.birth_date,
+                  gender = body1.gender,
+                  provider = body1.provider
+                )
+                body.mobile_no.map(format)
+                logger.info(s"""post check user request by body $body""")
+                if (body.email.isEmpty && body.mobile_no.isEmpty) {
+                  logger.info(s"""post check user response by result: server error and status: 400""")
+                  val entity = JsObject(
+                    "status" -> JsString("ERROR"),
+                    "user_id" -> JsString("-1")
+                  ).toString
+                  val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
+                  complete(HttpResponse(status = StatusCodes.BadRequest).withEntity(httpEntity))
+                } else {
+                  onSuccess(WebEngage.userCheck(body)) {
+                    case (_, status) if status =>
+                      logger.info(s"""post check user response by status: 200""")
+                      val entity = JsObject(
+                        "status" -> JsString("SUCCESS")
+                      ).toString
+                      val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
+                      complete(HttpResponse(status = StatusCodes.OK).withEntity(httpEntity))
+                    case (_, _) =>
+                      logger.info(s"""post check user response by result: server error and status: 500""")
+                      val entity = JsObject(
+                        "status" -> JsString("ERROR")
+                      ).toString
+                      val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
+                      complete(HttpResponse(status = StatusCodes.InternalServerError).withEntity(httpEntity))
+                  }
                 }
               }
             }
@@ -311,5 +327,9 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
     }
   }
 
+  def extractToken(token: String): HttpHeader => Option[String] = {
+    case HttpHeader("token", value) if token == value => Some(token)
+    case _ => None
+  }
 
 }
