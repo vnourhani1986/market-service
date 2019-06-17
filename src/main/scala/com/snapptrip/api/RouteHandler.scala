@@ -156,10 +156,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
         } ~
         path("sms") {
           post {
-            println("sms to me")
             headerValue(extractToken(token)) { ctx =>
-              println("sms to me")
-              println(ctx)
               entity(as[WebEngageSMSBody]) { body =>
                 logger.info(s"""post sms request by body $body""")
                 onSuccess(SmsService.sendSMS(List(body.smsData.toNumber), body.smsData.body)) {
