@@ -237,19 +237,10 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
           post {
             headerValue(extractToken(token)) { _ =>
               entity(as[WebEngageUserInfo]) { body1 =>
-                val body = WebEngageUserInfo(
-                  user_name = body1.user_name,
-                  name = body1.name,
-                  family = body1.family,
-                  email = body1.email,
-                  mobile_no = body1.mobile_no.map(format),
-                  birth_date = body1.birth_date,
-                  gender = body1.gender,
-                  provider = body1.provider
-                )
+                val body = body1.copy(mobile_no = body1.mobile_no.map(format))
                 logger.info(s"""post check user request by body $body""")
                 if (body.email.isEmpty && body.mobile_no.isEmpty) {
-                  logger.info(s"""post check user response by result: server error and status: 400""")
+                  logger.info(s"""post check user response by result: server error and status: ${400}""")
                   val entity = JsObject(
                     "status" -> JsString("ERROR"),
                     "user_id" -> JsString("-1")
@@ -258,22 +249,22 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
                   complete(HttpResponse(status = StatusCodes.BadRequest).withEntity(httpEntity))
                 } else {
                   onSuccess(WebEngage.userCheck(body)) {
-                    case (user, status) if status =>
-                      logger.info(s"""post check user response by status: 200""")
+                    case (user, status) if status == 200 || status == 201 =>
+                      logger.info(s"""post check user response by status: $status""")
                       val entity = JsObject(
                         "status" -> JsString("SUCCESS"),
                         "user_id" -> JsString(user.userId),
                       ).toString
                       val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
-                      complete(HttpResponse(status = StatusCodes.OK).withEntity(httpEntity))
-                    case (_, _) =>
-                      logger.info(s"""post check user response by result: server error and status: 500""")
+                      complete(HttpResponse(status = status).withEntity(httpEntity))
+                    case (_, status) =>
+                      logger.info(s"""post check user response by result: server error and status: ${500}""")
                       val entity = JsObject(
                         "status" -> JsString("ERROR"),
                         "user_id" -> JsString("-1")
                       ).toString
                       val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
-                      complete(HttpResponse(status = StatusCodes.InternalServerError).withEntity(httpEntity))
+                      complete(HttpResponse(status = status).withEntity(httpEntity))
                   }
                 }
               }
@@ -284,20 +275,10 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
           headerValue(extractToken(token)) { _ =>
             post {
               entity(as[WebEngageUserInfo]) { body1 =>
-                val body = WebEngageUserInfo(
-                  user_name = body1.user_name,
-                  name = body1.name,
-                  family = body1.family,
-                  email = body1.email,
-                  mobile_no = body1.mobile_no.map(format),
-                  birth_date = body1.birth_date,
-                  gender = body1.gender,
-                  provider = body1.provider
-                )
-                body.mobile_no.map(format)
+                val body = body1.copy(mobile_no = body1.mobile_no.map(format))
                 logger.info(s"""post check user request by body $body""")
                 if (body.email.isEmpty && body.mobile_no.isEmpty) {
-                  logger.info(s"""post check user response by result: server error and status: 400""")
+                  logger.info(s"""post check user response by result: server error and status: ${400}""")
                   val entity = JsObject(
                     "status" -> JsString("ERROR"),
                     "user_id" -> JsString("-1")
@@ -306,20 +287,20 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
                   complete(HttpResponse(status = StatusCodes.BadRequest).withEntity(httpEntity))
                 } else {
                   onSuccess(WebEngage.userCheck(body)) {
-                    case (_, status) if status =>
-                      logger.info(s"""post check user response by status: 200""")
+                    case (_, status) if status == 200 || status == 201 =>
+                      logger.info(s"""post check user response by status: $status""")
                       val entity = JsObject(
                         "status" -> JsString("SUCCESS")
                       ).toString
                       val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
-                      complete(HttpResponse(status = StatusCodes.OK).withEntity(httpEntity))
-                    case (_, _) =>
+                      complete(HttpResponse(status = status).withEntity(httpEntity))
+                    case (_, status) =>
                       logger.info(s"""post check user response by result: server error and status: 500""")
                       val entity = JsObject(
                         "status" -> JsString("ERROR")
                       ).toString
                       val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
-                      complete(HttpResponse(status = StatusCodes.InternalServerError).withEntity(httpEntity))
+                      complete(HttpResponse(status = status).withEntity(httpEntity))
                   }
                 }
               }

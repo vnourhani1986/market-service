@@ -95,7 +95,7 @@ object WebEngage extends LazyLogging {
     }
   }
 
-  def userCheck(request: WebEngageUserInfo): Future[(WebEngageUserInfoWithUserId, Boolean)] = {
+  def userCheck(request: WebEngageUserInfo): Future[(WebEngageUserInfoWithUserId, Int)] = {
     (for {
       oldUser <- WebEngageUserRepoImpl.findByFilter(request)
       user <- if (oldUser.isDefined) {
@@ -105,7 +105,7 @@ object WebEngage extends LazyLogging {
             val birthDate = Try {
               webEngageUser.birthDate.map(x => LocalDateTime.of(x, LocalTime.of(1, 1, 1, 1)).toString.replace(".", "-").concat("0"))
             }.toOption.flatten
-            Right(converter(webEngageUser, birthDate))
+            Right((converter(webEngageUser, birthDate), 200))
           case false =>
             Left(new Exception("can not update user data in database"))
         }
@@ -115,18 +115,18 @@ object WebEngage extends LazyLogging {
           val birthDate = Try {
             user.birthDate.map(x => LocalDateTime.of(x, LocalTime.of(1, 1, 1, 1)).toString.replace(".", "-").concat("0"))
           }.toOption.flatten
-          Right(converter(webEngageUser, birthDate))
+          Right((converter(webEngageUser, birthDate), 201))
         }
       }
       _ <- user match {
-        case Right(u) => actor ? SendUserInfo(u, 1)
+        case Right(u) => actor ? SendUserInfo(u._1, 1)
         case Left(e) => Future.failed(e)
       }
     } yield {
-      (user.right.get, true)
+      (user.right.get._1, user.right.get._2)
     }).recover {
       case error: Throwable =>
-        (WebEngageUserInfoWithUserId(userId = "-1"), false)
+        (WebEngageUserInfoWithUserId(userId = "-1"), 500)
     }
   }
 
