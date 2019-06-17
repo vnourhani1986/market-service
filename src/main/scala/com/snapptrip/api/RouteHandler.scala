@@ -156,6 +156,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
         } ~
         path("sms") {
           post {
+            println("sms to me")
             headerValue(extractToken(token)) { ctx =>
               println("sms to me")
               println(ctx)
