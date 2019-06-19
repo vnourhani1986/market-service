@@ -31,25 +31,25 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
 
   def routs: Route =
 
-    HealthCheckHandler.route ~ AuthHandler.routes ~ webEngageApi(token) ~
-      AuthHandler.authenticated { (userInfo, channel) =>
-        userValidator(userInfo => userInfo.role == UserRole.ADMIN, userInfo) { userInfo =>
-          users(userInfo)
-        } //~
-        //          userValidator(userInfo => userInfo.role == UserRole.SUPER_SUPPORT, userInfo) { userInfo =>
-        //
-        //          } ~
-        //          userValidator(userInfo => userInfo.role == UserRole.SUPPORT, userInfo) { userInfo =>
-        //
-        //          } ~
-        //          userValidator(userInfo => userInfo.role == UserRole.FINANCE, userInfo) { userInfo =>
-        //
-        //          } ~
-        //          userValidator(userInfo => userInfo.role == UserRole.BUSINESS, userInfo) { userInfo =>
-        //
-        //          }
-
-      }
+    HealthCheckHandler.route ~ AuthHandler.routes ~ webEngageApi(token) // ~
+//      AuthHandler.authenticated { (userInfo, channel) =>
+//        userValidator(userInfo => userInfo.role == UserRole.ADMIN, userInfo) { userInfo =>
+//          users(userInfo)
+//        } //~
+//        //          userValidator(userInfo => userInfo.role == UserRole.SUPER_SUPPORT, userInfo) { userInfo =>
+//        //
+//        //          } ~
+//        //          userValidator(userInfo => userInfo.role == UserRole.SUPPORT, userInfo) { userInfo =>
+//        //
+//        //          } ~
+//        //          userValidator(userInfo => userInfo.role == UserRole.FINANCE, userInfo) { userInfo =>
+//        //
+//        //          } ~
+//        //          userValidator(userInfo => userInfo.role == UserRole.BUSINESS, userInfo) { userInfo =>
+//        //
+//        //          }
+//
+//      }
 
   def userValidator[T](validator: UserInfo => Boolean, userInfo: UserInfo)(route: UserInfo => Route): Route = {
     if (validator(userInfo)) {
