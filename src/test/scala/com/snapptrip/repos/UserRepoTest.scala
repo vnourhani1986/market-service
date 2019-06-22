@@ -19,11 +19,12 @@ class UserRepoTest extends AsyncFlatSpec with AsyncMockFactory with Matchers wit
 //    (userRepo.findByFilter(_: Option[String] , _: Option[String])).when(*, *).returns(Future.successful(Some(user)))
 
     val result = for {
-      user <- WebEngageUserRepoImpl.findByFilter(Some("9124497401"), None)
-    } yield user
+      user1 <- WebEngageUserRepoImpl.findByFilter(Some("9124497401"), None)
+      user2 <- WebEngageUserRepoImpl.findByUserName(Some("3213"))
+    } yield (user1, user2)
 
     result.map{x =>
-      assert(x.isDefined)}
+      assert(x._1.isDefined && x._2.isEmpty)}
   }
 
 }
