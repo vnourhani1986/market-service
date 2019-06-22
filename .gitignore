@@ -6,7 +6,7 @@ test_invoice.pdf
 node_modules
 package-lock.json
 .DS_Store
-src/main/resources/application.conf
+#src/main/resources/application.conf
 .\\log/
 log/
 temp
