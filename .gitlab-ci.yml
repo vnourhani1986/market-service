@@ -50,8 +50,7 @@ build_beta:
     only:
        - beta
        - /review-.+$/
-    tags:
-        - azure
+
 
 build_master:
     stage: build
@@ -64,8 +63,7 @@ build_master:
         REG_SERVER: $REGISTRY_SERVER
     only:
        - master
-    tags:
-        - azure
+
 
 
 
