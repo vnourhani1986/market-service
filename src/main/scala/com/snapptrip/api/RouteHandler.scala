@@ -275,7 +275,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
                 val body = body1.copy(mobile_no = body1.mobile_no.map(format))
                 logger.info(s"""post register user request by body $body""")
                 if (body.email.isEmpty && body.mobile_no.isEmpty) {
-                  logger.info(s"""post check user response by result: server error and status: ${400}""")
+                  logger.info(s"""post register user response by result: server error and status: ${400}""")
                   val entity = JsObject(
                     "status" -> JsString("ERROR"),
                     "user_id" -> JsString("-1")
