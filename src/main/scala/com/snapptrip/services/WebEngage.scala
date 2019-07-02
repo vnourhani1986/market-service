@@ -77,14 +77,18 @@ object WebEngage extends LazyLogging {
       } else {
         Future.successful("")
       }
-      user <- WebEngageUserRepoImpl.findByFilter(user.mobile_no, user.email)
-      userId = user.map(_.userId)
+      oldUser <- WebEngageUserRepoImpl.findByFilter(user.mobile_no, user.email)
+      userId = oldUser.map(_.userId)
       newRequest <- if (userId.isDefined) {
         val lContent = JsObject("userId" -> JsString(userId.get)).fields.toList ::: event.asJsObject.fields.filterKeys(x => x != "email" || x != "mobile_no").toList
         val jContent = JsObject(lContent.toMap)
         Future.successful(jContent)
       } else {
-        Future.failed(new Exception("the user is not exists"))
+        WebEngageUserRepoImpl.save(User(userId = UUID.randomUUID().toString, mobileNo = user.mobile_no, email = user.email)).map{user =>
+          val lContent = JsObject("userId" -> JsString(user.userId)).fields.toList ::: event.asJsObject.fields.filterKeys(x => x != "email" || x != "mobile_no").toList
+          val jContent = JsObject(lContent.toMap)
+          jContent
+        }
       }
       _ <- actor ? SendEventInfo(newRequest, 1)
     } yield {
