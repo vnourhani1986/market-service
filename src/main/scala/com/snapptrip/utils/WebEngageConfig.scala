@@ -13,5 +13,5 @@ object WebEngageConfig {
   val apiKey: String = config.getString("web-engage.api-key")
   val usersUrl: String = s"""$baseUrl$licenseCode$userUrl"""
   val eventsUrl: String = s"""$baseUrl$licenseCode$eventUrl"""
-  val clientConnectionSettings: ClientConnectionSettings = ClientConnectionSettings(system).withConnectingTimeout(30.second)
+  val clientConnectionSettings: ClientConnectionSettings = ClientConnectionSettings(system).withConnectingTimeout(180.second)
 }
