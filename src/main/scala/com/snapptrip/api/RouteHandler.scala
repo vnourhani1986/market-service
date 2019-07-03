@@ -138,7 +138,8 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
         path("events") {
           post {
             headerValue(extractToken(token)) { _ =>
-              entity(as[WebEngageEvent]) { body =>
+              entity(as[WebEngageEvent]) { body1 =>
+                val body = body1.copy( user = body1.user.copy(mobile_no = body1.user.mobile_no.map(format)))
                 logger.info(s"""post events request by body $body""")
                 onSuccess(WebEngage.trackEventWithoutUserId(body)) {
                   case (status, entity) if status =>
