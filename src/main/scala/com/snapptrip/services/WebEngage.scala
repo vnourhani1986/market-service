@@ -84,8 +84,9 @@ object WebEngage extends LazyLogging {
         val jContent = JsObject(lContent.toMap)
         Future.successful(jContent)
       } else {
-        WebEngageUserRepoImpl.save(User(userId = UUID.randomUUID().toString, mobileNo = user.mobile_no, email = user.email)).map{user =>
-          val lContent = JsObject("userId" -> JsString(user.userId)).fields.toList ::: event.asJsObject.fields.filterKeys(x => x != "email" || x != "mobile_no").toList
+        userCheck(WebEngageUserInfo(mobile_no = user.mobile_no, email = user.email)).map{response =>
+          val (body, _) = response
+          val lContent = JsObject("userId" -> JsString(body.userId)).fields.toList ::: event.asJsObject.fields.filterKeys(x => x != "email" || x != "mobile_no").toList
           val jContent = JsObject(lContent.toMap)
           jContent
         }
