@@ -7,17 +7,16 @@ import akka.http.scaladsl.server.Directives.{entity, _}
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.RouteDirectives.reject
 import akka.util.Timeout
+import com.snapptrip.DI._
 import com.snapptrip.api.Messages._
-import com.snapptrip.auth.UserRole
 import com.snapptrip.formats.Formats._
 import com.snapptrip.notification.email.EmailService
 import com.snapptrip.notification.sms.SmsService
 import com.snapptrip.repos.BusinessRepoImpl
 import com.snapptrip.services.WebEngage
-import com.typesafe.config.Config
+import com.snapptrip.utils.formatters.MobileNoFormatter._
 import com.typesafe.scalalogging.LazyLogging
 import spray.json.{JsNumber, JsObject, JsString, JsValue}
-import com.snapptrip.DI._
 
 import scala.concurrent.ExecutionContextExecutor
 
@@ -32,24 +31,24 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
   def routs: Route =
 
     HealthCheckHandler.route ~ AuthHandler.routes ~ webEngageApi(token) // ~
-//      AuthHandler.authenticated { (userInfo, channel) =>
-//        userValidator(userInfo => userInfo.role == UserRole.ADMIN, userInfo) { userInfo =>
-//          users(userInfo)
-//        } //~
-//        //          userValidator(userInfo => userInfo.role == UserRole.SUPER_SUPPORT, userInfo) { userInfo =>
-//        //
-//        //          } ~
-//        //          userValidator(userInfo => userInfo.role == UserRole.SUPPORT, userInfo) { userInfo =>
-//        //
-//        //          } ~
-//        //          userValidator(userInfo => userInfo.role == UserRole.FINANCE, userInfo) { userInfo =>
-//        //
-//        //          } ~
-//        //          userValidator(userInfo => userInfo.role == UserRole.BUSINESS, userInfo) { userInfo =>
-//        //
-//        //          }
-//
-//      }
+  //      AuthHandler.authenticated { (userInfo, channel) =>
+  //        userValidator(userInfo => userInfo.role == UserRole.ADMIN, userInfo) { userInfo =>
+  //          users(userInfo)
+  //        } //~
+  //        //          userValidator(userInfo => userInfo.role == UserRole.SUPER_SUPPORT, userInfo) { userInfo =>
+  //        //
+  //        //          } ~
+  //        //          userValidator(userInfo => userInfo.role == UserRole.SUPPORT, userInfo) { userInfo =>
+  //        //
+  //        //          } ~
+  //        //          userValidator(userInfo => userInfo.role == UserRole.FINANCE, userInfo) { userInfo =>
+  //        //
+  //        //          } ~
+  //        //          userValidator(userInfo => userInfo.role == UserRole.BUSINESS, userInfo) { userInfo =>
+  //        //
+  //        //          }
+  //
+  //      }
 
   def userValidator[T](validator: UserInfo => Boolean, userInfo: UserInfo)(route: UserInfo => Route): Route = {
     if (validator(userInfo)) {
@@ -139,7 +138,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
           post {
             headerValue(extractToken(token)) { _ =>
               entity(as[WebEngageEvent]) { body1 =>
-                val body = body1.copy( user = body1.user.copy(mobile_no = body1.user.mobile_no.map(format)))
+                val body = body1.copy(user = body1.user.copy(mobile_no = body1.user.mobile_no.map(format)))
                 logger.info(s"""post events request by body $body""")
                 onSuccess(WebEngage.trackEventWithoutUserId(body)) {
                   case (status, entity) if status =>

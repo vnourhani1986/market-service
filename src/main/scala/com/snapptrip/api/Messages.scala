@@ -3,6 +3,7 @@ package com.snapptrip.api
 import java.time.LocalDate
 
 import spray.json.JsValue
+import com.snapptrip.utils.formatters.MobileNoFormatter._
 
 object Messages {
 
@@ -87,10 +88,5 @@ object Messages {
 
   case class WebEngageEvent(user: EventUserInfo, event: JsValue)
 
-  val formats = List(("""[0][9][0-9][0-9]{8,8}""", 1), ("""[0][0][9][8][9][0-9][0-9]{8,8}""", 4), ("""[+][9][8][9][0-9][0-9]{8,8}""", 3))
-
-  def format(mobileNo: String) = {
-    formats.map(x => (mobileNo.trim.matches(x._1), x)).find(_._1).map(_._2._2).map(mobileNo.trim.substring).getOrElse(mobileNo.trim)
-  }
 
 }
