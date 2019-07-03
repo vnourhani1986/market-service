@@ -1,5 +1,6 @@
 package com.snapptrip.services
 
+import java.time.format.DateTimeFormatter
 import java.time.{LocalDateTime, LocalTime}
 import java.util.UUID
 
@@ -19,7 +20,7 @@ import com.snapptrip.repos.WebEngageUserRepoImpl
 import com.snapptrip.utils.WebEngageConfig
 import com.snapptrip.webengage.{SendEventInfo, SendUserInfo, WebengageService}
 import com.typesafe.scalalogging.LazyLogging
-import spray.json.{JsObject, JsString, JsValue}
+import spray.json.{JsObject, JsString, JsValue, JsonParser}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -80,13 +81,17 @@ object WebEngage extends LazyLogging {
       oldUser <- WebEngageUserRepoImpl.findByFilter(user.mobile_no, user.email)
       userId = oldUser.map(_.userId)
       newRequest <- if (userId.isDefined) {
-        val lContent = JsObject("userId" -> JsString(userId.get)).fields.toList ::: event.asJsObject.fields.filterKeys(x => x != "email" || x != "mobile_no").toList
+        val lContent = JsObject("userId" -> JsString(userId.get)).fields.toList :::
+          event.asJsObject.fields.filterKeys(_ == "eventTime").toList.flatMap(x => JsObject(x._1 -> JsString(x._2.compactPrint.replace(s""""""", "").concat("-0000"))).fields.toList) :::
+          event.asJsObject.fields.filterKeys(x => x != "email" && x != "mobile_no" && x != "eventTime").toList
         val jContent = JsObject(lContent.toMap)
         Future.successful(jContent)
       } else {
-        userCheck(WebEngageUserInfo(mobile_no = user.mobile_no, email = user.email)).map{response =>
+        userCheck(WebEngageUserInfo(mobile_no = user.mobile_no, email = user.email)).map { response =>
           val (body, _) = response
-          val lContent = JsObject("userId" -> JsString(body.userId)).fields.toList ::: event.asJsObject.fields.filterKeys(x => x != "email" || x != "mobile_no").toList
+          val lContent = JsObject("userId" -> JsString(body.userId)).fields.toList :::
+            event.asJsObject.fields.filterKeys(_ == "eventTime").toList.flatMap(x => JsObject(x._1 -> JsString(x._2.compactPrint.replace(s""""""", "").concat("-0000"))).fields.toList) :::
+            event.asJsObject.fields.filterKeys(x => x != "email" && x != "mobile_no" && x != "eventTime").toList
           val jContent = JsObject(lContent.toMap)
           jContent
         }
@@ -96,6 +101,7 @@ object WebEngage extends LazyLogging {
       (true, JsObject("status" -> JsString("success")))
     }).recover {
       case error: Throwable =>
+        println(error.getMessage)
         (false, JsObject("status" -> JsString("failed")))
     }
   }
@@ -166,14 +172,14 @@ object WebEngage extends LazyLogging {
   def converter(user: User, birthDate: Option[String]): WebEngageUserInfoWithUserId = {
     WebEngageUserInfoWithUserId(
       userId = user.userId,
-//      user_name = user.userName,
+      //      user_name = user.userName,
       firstName = user.name,
       lastName = user.family,
       email = user.email,
       phone = user.mobileNo,
       birthDate = birthDate,
       gender = user.gender,
-//      provider = user.provider
+      //      provider = user.provider
     )
   }
 
