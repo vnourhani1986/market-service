@@ -1,6 +1,5 @@
 package com.snapptrip.services
 
-import java.time.format.DateTimeFormatter
 import java.time.{LocalDateTime, LocalTime}
 import java.util.UUID
 
@@ -20,7 +19,7 @@ import com.snapptrip.repos.WebEngageUserRepoImpl
 import com.snapptrip.utils.WebEngageConfig
 import com.snapptrip.webengage.{SendEventInfo, SendUserInfo, WebengageService}
 import com.typesafe.scalalogging.LazyLogging
-import spray.json.{JsObject, JsString, JsValue, JsonParser}
+import spray.json.{JsObject, JsString, JsValue}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -82,7 +81,7 @@ object WebEngage extends LazyLogging {
       userId = oldUser.map(_.userId)
       newRequest <- if (userId.isDefined) {
         val lContent = JsObject("userId" -> JsString(userId.get)).fields.toList :::
-          event.asJsObject.fields.filterKeys(_ == "eventTime").toList.flatMap(x => JsObject(x._1 -> JsString(x._2.compactPrint.replace(s""""""", "").concat("-0000"))).fields.toList) :::
+          event.asJsObject.fields.filterKeys(_ == "eventTime").toList.flatMap(x => JsObject(x._1 -> JsString(x._2.compactPrint.replace(s""""""", "").concat(WebEngageConfig.timeOffset))).fields.toList) :::
           event.asJsObject.fields.filterKeys(x => x != "email" && x != "mobile_no" && x != "eventTime").toList
         val jContent = JsObject(lContent.toMap)
         Future.successful(jContent)
@@ -90,7 +89,7 @@ object WebEngage extends LazyLogging {
         userCheck(WebEngageUserInfo(mobile_no = user.mobile_no, email = user.email)).map { response =>
           val (body, _) = response
           val lContent = JsObject("userId" -> JsString(body.userId)).fields.toList :::
-            event.asJsObject.fields.filterKeys(_ == "eventTime").toList.flatMap(x => JsObject(x._1 -> JsString(x._2.compactPrint.replace(s""""""", "").concat("-0000"))).fields.toList) :::
+            event.asJsObject.fields.filterKeys(_ == "eventTime").toList.flatMap(x => JsObject(x._1 -> JsString(x._2.compactPrint.replace(s""""""", "").concat(WebEngageConfig.timeOffset))).fields.toList) :::
             event.asJsObject.fields.filterKeys(x => x != "email" && x != "mobile_no" && x != "eventTime").toList
           val jContent = JsObject(lContent.toMap)
           jContent
