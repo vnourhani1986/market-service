@@ -1,6 +1,7 @@
 package com.snapptrip.services
 
-import java.time.{LocalDateTime, LocalTime}
+import java.time.format.DateTimeFormatter
+import java.time.{LocalDate, LocalDateTime, LocalTime}
 import java.util.UUID
 
 import akka.actor.ActorRef
@@ -113,7 +114,7 @@ object WebEngage extends LazyLogging {
         WebEngageUserRepoImpl.update(webEngageUser).map {
           case true =>
             val birthDate = Try {
-              webEngageUser.birthDate.map(x => LocalDateTime.of(x, LocalTime.of(1, 1, 1, 1)).toString.replace(".", "-").concat("0"))
+              webEngageUser.birthDate.map(_.atStartOfDay().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss" + WebEngageConfig.timeOffset)))
             }.toOption.flatten
             Right((converter(webEngageUser, birthDate), 200))
           case false =>
@@ -123,7 +124,7 @@ object WebEngage extends LazyLogging {
         val webEngageUser = converter(request)
         WebEngageUserRepoImpl.save(webEngageUser).map { user =>
           val birthDate = Try {
-            user.birthDate.map(x => LocalDateTime.of(x, LocalTime.of(1, 1, 1, 1)).toString.replace(".", "-").concat("0"))
+            user.birthDate.map(_.atStartOfDay().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss" + WebEngageConfig.timeOffset)))
           }.toOption.flatten
           Right((converter(webEngageUser, birthDate), 201))
         }
