@@ -1,6 +1,7 @@
 stages:
   - build
   - deploy
+  - test
 
 .build_script:
   script: &build_script
@@ -143,3 +144,8 @@ deploy_staging:
     only:
        - /review-.+$/
 
+test_stage:
+  stage: test
+  script:
+    - sbt clean coverage test coverageReport
+    - sbt -Dsonar.projectName=$CI_PRIJECT_NAME -Dsonar.branch.name=$CI_COMMIT_REF_NAME sonarScan

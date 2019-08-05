@@ -1,3 +1,4 @@
+
 name := "market.service"
 
 version := "1.0"
@@ -76,7 +77,12 @@ libraryDependencies ++= {
   )
 }
 
-
+sonarProperties ++= Map(
+  "sonar.host.url" ->  sys.env.getOrElse("SONAR_ADDRESS", "http://sonarqube.ptp"),
+  "sonar.sources" -> "src/main/scala",
+  "sonar.tests" -> "src/test/scala",
+  "sonar.scala.scoverage.reportPath" -> "target/scala-2.12/scoverage-report/scoverage.xml"  // this is for test coverage
+)
 
 Revolver.settings
 enablePlugins(JavaServerAppPackaging)
