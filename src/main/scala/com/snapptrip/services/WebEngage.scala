@@ -18,6 +18,7 @@ import com.snapptrip.api.Messages.{WebEngageEvent, WebEngageUserInfo, WebEngageU
 import com.snapptrip.models.User
 import com.snapptrip.repos.WebEngageUserRepoImpl
 import com.snapptrip.utils.WebEngageConfig
+import com.snapptrip.utils.formatters.EmailFormatter
 import com.snapptrip.webengage.{SendEventInfo, SendUserInfo, WebengageService}
 import com.typesafe.scalalogging.LazyLogging
 import spray.json.{JsObject, JsString, JsValue}
@@ -147,7 +148,8 @@ object WebEngage extends LazyLogging {
       userId = UUID.randomUUID().toString,
       name = webEngageUserInfo.name,
       family = webEngageUserInfo.family,
-      email = webEngageUserInfo.email,
+      email = webEngageUserInfo.email.map(EmailFormatter.format),
+      originEmail = if(webEngageUserInfo.email.isDefined) List(webEngageUserInfo.email.get) else Nil,
       mobileNo = webEngageUserInfo.mobile_no,
       birthDate = webEngageUserInfo.birth_date,
       gender = webEngageUserInfo.gender,
@@ -161,7 +163,8 @@ object WebEngage extends LazyLogging {
       userId = oldUser.get.userId,
       name = webEngageUserInfo.name.orElse(oldUser.get.name),
       family = webEngageUserInfo.family.orElse(oldUser.get.family),
-      email = webEngageUserInfo.email.orElse(oldUser.get.email),
+      email = webEngageUserInfo.email.map(EmailFormatter.format).orElse(oldUser.get.email),
+      originEmail = if(webEngageUserInfo.email.isDefined) oldUser.get.originEmail.filter(_ != webEngageUserInfo.email.get) ++ List(webEngageUserInfo.email.get) else oldUser.get.originEmail,
       mobileNo = webEngageUserInfo.mobile_no.orElse(oldUser.get.mobileNo),
       birthDate = webEngageUserInfo.birth_date.orElse(oldUser.get.birthDate),
       gender = webEngageUserInfo.gender.orElse(oldUser.get.gender),

@@ -139,8 +139,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
           post {
             headerValue(extractToken(token)) { _ =>
               entity(as[WebEngageEvent]) { body1 =>
-                val body = body1.copy(user = body1.user.copy(mobile_no = body1.user.mobile_no.map(format), email = body1.user.email.map(EmailFormatter.format)))
-                println(body)
+                val body = body1.copy(user = body1.user.copy(mobile_no = body1.user.mobile_no.map(format)))
                 logger.info(s"""post events request by body $body""")
                 onSuccess(WebEngage.trackEventWithoutUserId(body)) {
                   case (status, entity) if status =>
@@ -236,7 +235,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
           post {
             headerValue(extractToken(token)) { _ =>
               entity(as[WebEngageUserInfo]) { body1 =>
-                val body = body1.copy(mobile_no = body1.mobile_no.map(format), email = body1.email.map(EmailFormatter.format))
+                val body = body1.copy(mobile_no = body1.mobile_no.map(format))
                 logger.info(s"""post check user request by body $body""")
                 if (body.email.isEmpty && body.mobile_no.isEmpty) {
                   logger.info(s"""post check user response by result: server error and status: ${400}""")
@@ -274,7 +273,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
           headerValue(extractToken(token)) { _ =>
             post {
               entity(as[WebEngageUserInfo]) { body1 =>
-                val body = body1.copy(mobile_no = body1.mobile_no.map(format), email = body1.email.map(EmailFormatter.format))
+                val body = body1.copy(mobile_no = body1.mobile_no.map(format))
                 logger.info(s"""post register user request by body $body""")
                 if (body.email.isEmpty && body.mobile_no.isEmpty) {
                   logger.info(s"""post register user response by result: server error and status: ${400}""")

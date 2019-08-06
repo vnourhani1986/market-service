@@ -14,6 +14,7 @@ case class User(
                  name: Option[String] = None,
                  family: Option[String] = None,
                  email: Option[String] = None,
+                 originEmail: List[String] = Nil,
                  mobileNo: Option[String] = None,
                  birthDate: Option[LocalDate] = None,
                  gender: Option[String] = None,

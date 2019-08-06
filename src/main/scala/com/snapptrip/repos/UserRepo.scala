@@ -7,6 +7,7 @@ import com.snapptrip.api.Messages.WebEngageUserInfo
 import com.snapptrip.models.User
 import com.snapptrip.utils.DateTimeUtils
 import com.snapptrip.utils.PostgresProfiler.api._
+import com.snapptrip.utils.formatters.EmailFormatter
 import slick.lifted.ProvenShape
 
 import scala.concurrent.Future
@@ -63,12 +64,12 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
   }
 
   override def findByFilter(filter: WebEngageUserInfo): Future[Option[User]] = {
-
+    val email = filter.email.map(EmailFormatter.format)
     val query = userTable
       //      .filterOpt(filter.user_name)((table, userName) => table.userName === userName)
       //      .filterOpt(filter.name)((table, name) => table.name === name)
 //            .filterOpt(filter.family)((table, family) => table.family === family)
-      .filterOpt(filter.email)((table, email) => table.email === email || (table.email.isEmpty && table.mobileNo.isDefined))
+      .filterOpt(email)((table, e) => table.email === e || (table.email.isEmpty && table.mobileNo.isDefined))
       .filterOpt(filter.mobile_no)((table, mobileNo) => table.mobileNo === mobileNo || (table.mobileNo.isEmpty && table.email.isDefined))
       //      .filterOpt(filter.birth_date)((table, birthDate) => table.birthDate === birthDate)
       //      .filterOpt(filter.gender)((table, gender) => table.gender === gender)
@@ -80,12 +81,12 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
   }
 
   override def findByFilter(mobileNo: Option[String], email: Option[String]): Future[Option[User]] = {
-
+    val e = email.map(EmailFormatter.format)
     val query = userTable
       //      .filterOpt(filter.user_name)((table, userName) => table.userName === userName)
       //      .filterOpt(filter.name)((table, name) => table.name === name)
       //      .filterOpt(filter.family)((table, family) => table.family === family)
-      .filterOpt(email)((table, email) => table.email === email || (table.email.isEmpty && table.mobileNo.isDefined))
+      .filterOpt(e)((table, e1) => table.email === e1 || (table.email.isEmpty && table.mobileNo.isDefined))
       .filterOpt(mobileNo)((table, mobileNo) => table.mobileNo === mobileNo || (table.mobileNo.isEmpty && table.email.isDefined))
       //      .filterOpt(filter.birth_date)((table, birthDate) => table.birthDate === birthDate)
       //      .filterOpt(filter.gender)((table, gender) => table.gender === gender)
@@ -100,7 +101,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
 
     val action = userTable returning userTable.map(_.id) into ((table, id) =>
       table.copy(id = Some(id))) += User(None, user.userName, user.userId,
-      DateTimeUtils.nowOpt, None, user.name, user.family, user.email, user.mobileNo, user.birthDate, user.gender, user.provider, disabled = user.disabled)
+      DateTimeUtils.nowOpt, None, user.name, user.family, user.email, user.originEmail, user.mobileNo, user.birthDate, user.gender, user.provider, disabled = user.disabled)
     db.run(action)
 
   }
@@ -110,8 +111,8 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
     val action = userTable
       .filterOpt(user.email)((table, email) => table.email === email || (table.email.isEmpty && user.mobileNo.isDefined))
       .filterOpt(user.mobileNo)((table, mobileNo) => table.mobileNo === mobileNo || (table.mobileNo.isEmpty && user.email.isDefined))
-      .map(x => (x.userName, x.name, x.family, x.email, x.mobileNo, x.birthDate, x.gender, x.modifiedAt, x.disabled, x.provider))
-      .update((user.userName, user.name, user.family, user.email, user.mobileNo, user.birthDate, user.gender, DateTimeUtils.nowOpt,
+      .map(x => (x.userName, x.name, x.family, x.email, x.originEmail, x.mobileNo, x.birthDate, x.gender, x.modifiedAt, x.disabled, x.provider))
+      .update((user.userName, user.name, user.family, user.email, user.originEmail, user.mobileNo, user.birthDate, user.gender, DateTimeUtils.nowOpt,
         user.disabled, user.provider))
 
     db.run(action).map(_ > 0)
@@ -151,6 +152,8 @@ private[repos] trait WebEngageUserTableComponent extends SlickSupport {
 
     def email: Rep[Option[String]] = column[Option[String]]("email")
 
+    def originEmail: Rep[List[String]] = column[List[String]]("origin_email")
+
     def mobileNo: Rep[Option[String]] = column[Option[String]]("mobile_no")
 
     def birthDate: Rep[Option[LocalDate]] = column[Option[LocalDate]]("birth_date")
@@ -172,6 +175,7 @@ private[repos] trait WebEngageUserTableComponent extends SlickSupport {
       name,
       family,
       email,
+      originEmail,
       mobileNo,
       birthDate,
       gender,
