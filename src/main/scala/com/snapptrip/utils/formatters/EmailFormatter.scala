@@ -7,7 +7,7 @@ object EmailFormatter {
     (if(e.last == "gmail.com") {
       e.head.replace(".", "") + "@" + e.last
     } else {
-      e.head + "@" + e.last
+      email
     }).toLowerCase
   }
 
