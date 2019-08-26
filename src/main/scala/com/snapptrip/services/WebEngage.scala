@@ -88,7 +88,7 @@ object WebEngage extends LazyLogging {
         val jContent = JsObject(lContent.toMap)
         Future.successful(jContent)
       } else {
-        val provider = event.asJsObject.fields.filterKeys(_ == "provider").headOption.map(_._2.compactPrint)
+        val provider = event.asJsObject.fields.filterKeys(_ == "eventData").headOption.flatMap(_._2.asJsObject.fields.filterKeys(_ == "provider").headOption).map(_._2.compactPrint.replace(s""""""", ""))
         userCheck(WebEngageUserInfo(mobile_no = user.mobile_no, email = user.email, provider = provider)).map { response =>
           val (body, _) = response
           val lContent = JsObject("userId" -> JsString(body.userId)).fields.toList :::
