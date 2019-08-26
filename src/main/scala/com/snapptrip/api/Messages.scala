@@ -62,7 +62,7 @@ object Messages {
                                 gender: Option[String] = None,
                                 provider: Option[String] = None
                               ) {
-    mobile_no.map(format)
+    format(mobile_no)
   }
 
   case class WebEngageUserAttributes(Age: String)
@@ -79,11 +79,11 @@ object Messages {
 //                                          provider: Option[String] = None,
 
                                         ) {
-    phone = phone.map(format)
+    phone = format(phone)
   }
 
   case class EventUserInfo(var mobile_no: Option[String], email: Option[String]) {
-    mobile_no.map(format)
+    format(mobile_no)
   }
 
   case class WebEngageEvent(user: EventUserInfo, event: JsValue)

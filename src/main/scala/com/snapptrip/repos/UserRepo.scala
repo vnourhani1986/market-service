@@ -64,7 +64,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
   }
 
   override def findByFilter(filter: WebEngageUserInfo): Future[Option[User]] = {
-    val email = filter.email.map(EmailFormatter.format)
+    val email = EmailFormatter.format(filter.email)
     val query = userTable
       //      .filterOpt(filter.user_name)((table, userName) => table.userName === userName)
       //      .filterOpt(filter.name)((table, name) => table.name === name)
@@ -81,7 +81,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
   }
 
   override def findByFilter(mobileNo: Option[String], email: Option[String]): Future[Option[User]] = {
-    val e = email.map(EmailFormatter.format)
+    val e = EmailFormatter.format(email)
     val query = userTable
       //      .filterOpt(filter.user_name)((table, userName) => table.userName === userName)
       //      .filterOpt(filter.name)((table, name) => table.name === name)

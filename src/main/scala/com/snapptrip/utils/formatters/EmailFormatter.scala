@@ -2,13 +2,21 @@ package com.snapptrip.utils.formatters
 
 object EmailFormatter {
 
-  def format(email: String): String = {
-    val e = email.split("@").toList
-    (if(e.last == "gmail.com") {
-      e.head.replace(".", "") + "@" + e.last
-    } else {
-      email
-    }).toLowerCase
+  def format(email: Option[String]): Option[String] = {
+
+    email.map(_.trim).flatMap{ em =>
+      if(em.length == 0){
+        None
+      } else {
+        val e = em.split("@").toList
+        Some((if(e.last == "gmail.com") {
+          e.head.replace(".", "") + "@" + e.last
+        } else {
+          em
+        }).toLowerCase)
+      }
+    }
+
   }
 
 }
