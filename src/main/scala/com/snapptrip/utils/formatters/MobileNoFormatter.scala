@@ -29,12 +29,16 @@ object MobileNoFormatter {
   )
 
   def format(mobileNo: Option[String]): Option[String] = {
+    println("mobileNo", mobileNo)
     mobileNo.flatMap { m =>
       val mobile = m.trim
       if (mobile.length == 0) {
         None
       } else {
-        formats.map(x => (noPersianToEnglish(mobile).matches(x._1), x)).find(_._1).map(_._2._2).map(m.substring)
+        formats.map(x => (noPersianToEnglish(mobile).matches(x._1), x)).find(_._1).map(_._2._2).map(m.substring) match {
+          case Some(em) => Some(em)
+          case None => Some(mobile)
+        }
       }
     }
   }

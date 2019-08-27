@@ -5,7 +5,7 @@ object EmailFormatter {
   def format(email: Option[String]): Option[String] = {
 
     email.map(_.trim).flatMap{ em =>
-      if(em.length == 0){
+      if(em.length == 0 || !em.contains("@")){
         None
       } else {
         val e = em.split("@").toList
