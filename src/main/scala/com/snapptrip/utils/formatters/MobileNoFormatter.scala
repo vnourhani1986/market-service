@@ -29,7 +29,6 @@ object MobileNoFormatter {
   )
 
   def format(mobileNo: Option[String]): Option[String] = {
-    println("mobileNo", mobileNo)
     mobileNo.flatMap { m =>
       val mobile = m.trim
       if (mobile.length == 0) {

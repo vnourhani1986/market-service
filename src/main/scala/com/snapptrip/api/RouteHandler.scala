@@ -14,7 +14,6 @@ import com.snapptrip.notification.email.EmailService
 import com.snapptrip.notification.sms.SmsService
 import com.snapptrip.repos.BusinessRepoImpl
 import com.snapptrip.services.WebEngage
-import com.snapptrip.utils.formatters.EmailFormatter
 import com.snapptrip.utils.formatters.MobileNoFormatter._
 import com.typesafe.scalalogging.LazyLogging
 import spray.json.{JsNumber, JsObject, JsString, JsValue}
