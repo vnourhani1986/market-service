@@ -172,8 +172,8 @@ object WebEngage extends LazyLogging {
       originEmail = if(webEngageUserInfo.email.isDefined) oldUser.get.originEmail.filter(_ != webEngageUserInfo.email.get) ++ List(webEngageUserInfo.email.get) else oldUser.get.originEmail,
       mobileNo = webEngageUserInfo.mobile_no.orElse(oldUser.get.mobileNo),
       birthDate = webEngageUserInfo.birth_date.orElse(oldUser.get.birthDate),
-      gender = webEngageUserInfo.gender.orElse(oldUser.get.gender)
-//      provider = webEngageUserInfo.provider.orElse(oldUser.get.provider)
+      gender = webEngageUserInfo.gender.orElse(oldUser.get.gender),
+      provider = oldUser.get.provider
     )
   }
 
