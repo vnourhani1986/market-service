@@ -5,7 +5,6 @@ import java.time.{LocalDate, LocalDateTime}
 
 import com.snapptrip.api.Messages.BusinessName
 import com.snapptrip.formats.Formats._
-import com.snapptrip.models._
 import com.snapptrip.utils.PostgresProfiler.api._
 import spray.json._
 
