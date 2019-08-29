@@ -78,6 +78,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
       case (None, Some(e)) => userTable
         .filter(table => table.email === e)
       case (None, None) => userTable
+        .take(0)
     }).sortBy(table => (table.mobileNo, table.email)).result.headOption
 
     db.run(query)
@@ -96,6 +97,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
       case (None, Some(e)) => userTable
         .filter(table => table.email === e)
       case (None, None) => userTable
+        .take(0)
     }).sortBy(table => (table.mobileNo, table.email)).result.headOption
 
     db.run(query)
@@ -114,6 +116,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
       case (None, Some(e)) => userTable
         .filter(table => table.email === e)
       case (None, None) => userTable
+        .take(0)
     }).sortBy(table => (table.mobileNo, table.email)).result
 
     db.run(query)
@@ -139,6 +142,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
       case (None, Some(e)) => userTable
         .filter(table => table.email === e)
       case (None, None) => userTable
+        .take(0)
     }).sortBy(table => (table.mobileNo, table.email))
       .take(1)
       .map(x => (x.userName, x.name, x.family, x.email, x.originEmail, x.mobileNo, x.birthDate, x.gender, x.modifiedAt, x.disabled, x.provider))
