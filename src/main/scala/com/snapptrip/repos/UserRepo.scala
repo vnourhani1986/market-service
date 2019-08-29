@@ -1,5 +1,6 @@
 package com.snapptrip.repos
 
+import java.sql.{Date, Timestamp}
 import java.time.{LocalDate, LocalDateTime}
 
 import com.snapptrip.DI._
@@ -25,6 +26,8 @@ trait WebEngageUserRepo {
   def findByFilter(filter: WebEngageUserInfo): Future[Option[User]]
 
   def findByFilter(mobileNo: Option[String], email: Option[String]): Future[Option[User]]
+
+  def find(mobileNo: Option[String], email: Option[String]): Future[Seq[User]]
 
   def save(user: User): Future[User]
 
@@ -64,34 +67,54 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
   }
 
   override def findByFilter(filter: WebEngageUserInfo): Future[Option[User]] = {
-    val email = EmailFormatter.format(filter.email)
-    val query = userTable
-      //      .filterOpt(filter.user_name)((table, userName) => table.userName === userName)
-      //      .filterOpt(filter.name)((table, name) => table.name === name)
-//            .filterOpt(filter.family)((table, family) => table.family === family)
-      .filterOpt(email)((table, e) => table.email === e || (table.email.isEmpty && table.mobileNo.isDefined))
-      .filterOpt(filter.mobile_no)((table, mobileNo) => table.mobileNo === mobileNo || (table.mobileNo.isEmpty && table.email.isDefined))
-      //      .filterOpt(filter.birth_date)((table, birthDate) => table.birthDate === birthDate)
-      //      .filterOpt(filter.gender)((table, gender) => table.gender === gender)
-      .result
-      .headOption
+
+    val em = EmailFormatter.format(filter.email)
+
+    val query = ((filter.mobile_no, em) match {
+      case (Some(m), Some(e)) =>  userTable
+        .filter(table => table.mobileNo === m && table.email === e)
+      case (Some(m), None) => userTable
+        .filter(table => table.mobileNo === m)
+      case (None, Some(e)) => userTable
+        .filter(table => table.email === e)
+      case (None, None) => userTable
+    }).sortBy(table => (table.mobileNo, table.email)).result.headOption
 
     db.run(query)
 
   }
 
   override def findByFilter(mobileNo: Option[String], email: Option[String]): Future[Option[User]] = {
-    val e = EmailFormatter.format(email)
-    val query = userTable
-      //      .filterOpt(filter.user_name)((table, userName) => table.userName === userName)
-      //      .filterOpt(filter.name)((table, name) => table.name === name)
-      //      .filterOpt(filter.family)((table, family) => table.family === family)
-      .filterOpt(e)((table, e1) => table.email === e1 || (table.email.isEmpty && table.mobileNo.isDefined))
-      .filterOpt(mobileNo)((table, mobileNo) => table.mobileNo === mobileNo || (table.mobileNo.isEmpty && table.email.isDefined))
-      //      .filterOpt(filter.birth_date)((table, birthDate) => table.birthDate === birthDate)
-      //      .filterOpt(filter.gender)((table, gender) => table.gender === gender)
-      .result
-      .headOption
+
+    val em = EmailFormatter.format(email)
+
+    val query = ((mobileNo, em) match {
+      case (Some(m), Some(e)) =>  userTable
+        .filter(table => table.mobileNo === m && table.email === e)
+      case (Some(m), None) => userTable
+        .filter(table => table.mobileNo === m)
+      case (None, Some(e)) => userTable
+        .filter(table => table.email === e)
+      case (None, None) => userTable
+    }).sortBy(table => (table.mobileNo, table.email)).result.headOption
+
+    db.run(query)
+
+  }
+
+  override def find(mobileNo: Option[String], email: Option[String]): Future[Seq[User]] = {
+
+    val em = EmailFormatter.format(email)
+
+    val query = ((mobileNo, em) match {
+      case (Some(m), Some(e)) =>  userTable
+          .filter(table => table.mobileNo === m && table.email === e)
+      case (Some(m), None) => userTable
+          .filter(table => table.mobileNo === m)
+      case (None, Some(e)) => userTable
+        .filter(table => table.email === e)
+      case (None, None) => userTable
+    }).sortBy(table => (table.mobileNo, table.email)).result
 
     db.run(query)
 
@@ -108,9 +131,16 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
 
   override def update(user: User): Future[Boolean] = {
 
-    val action = userTable
-      .filterOpt(user.email)((table, email) => table.email === email || (table.email.isEmpty && user.mobileNo.isDefined))
-      .filterOpt(user.mobileNo)((table, mobileNo) => table.mobileNo === mobileNo || (table.mobileNo.isEmpty && user.email.isDefined))
+    val action = ((user.mobileNo, user.email) match {
+      case (Some(m), Some(e)) =>  userTable
+        .filter(table => table.mobileNo === m && table.email === e)
+      case (Some(m), None) => userTable
+        .filter(table => table.mobileNo === m)
+      case (None, Some(e)) => userTable
+        .filter(table => table.email === e)
+      case (None, None) => userTable
+    }).sortBy(table => (table.mobileNo, table.email))
+      .take(1)
       .map(x => (x.userName, x.name, x.family, x.email, x.originEmail, x.mobileNo, x.birthDate, x.gender, x.modifiedAt, x.disabled, x.provider))
       .update((user.userName, user.name, user.family, user.email, user.originEmail, user.mobileNo, user.birthDate, user.gender, DateTimeUtils.nowOpt,
         user.disabled, user.provider))
