@@ -82,7 +82,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
   }
 
   override def deletedUsersFinalGet: Future[Seq[String]] = {
-    val query = sql"""SELECT user_id from delete_users_final where disabled = false and deleted = false;"""
+    val query = sql"""SELECT user_id from delete_users_final where disabled = false and deleted = false limit 10;"""
       .as[String]
     db.run(query)
   }

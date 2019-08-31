@@ -38,7 +38,7 @@ object Main extends App with RequestTimeout with LazyLogging with CommonDirectiv
   }.onComplete {
     case scala.util.Success(_) =>
       logger.info("Started ...")
-      DeleteWebEngageUsersUtil.deleteWebEngageUsersTable()
+
     case scala.util.Failure(ex) =>
       logger.error(s"Failed to bind to $host:$httpPort!", ex)
       system.terminate()

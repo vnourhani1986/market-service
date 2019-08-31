@@ -7,12 +7,12 @@ import com.snapptrip.repos.WebEngageUserRepoImpl
 import com.snapptrip.services.WebEngage
 import spray.json._
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
 
 object DeleteWebEngageUsersUtil {
 
-  def deleteWebEngageUsersTable(): Unit = {
+  def deleteWebEngageUsersTable(): Future[Unit] = {
 
     println("delete webengage users started ...")
     WebEngageUserRepoImpl.deletedUsersFinalGet.map { userIds =>
@@ -36,6 +36,7 @@ object DeleteWebEngageUsersUtil {
 //          println(disabled)
         }
         Await.result(result, Duration.Inf)
+//        result
       }
 
     }
