@@ -26,8 +26,8 @@ class WebengageService(
 
   val props = Props(new WebEngageActor)
   val actor: ActorRef = system.actorOf(props, s"WebengageActor-${Random.nextInt}")
-//  val props1 = Props(new DeleteWebEngageUserActor())
-//  val actor1: ActorRef = system.actorOf(props1, s"delete-webengage-user-actor-${Random.nextInt}")
+  val props1 = Props(new DeleteWebEngageUserActor())
+  val actor1: ActorRef = system.actorOf(props1, s"delete-webengage-user-actor-${Random.nextInt}")
 
 }
 
@@ -117,7 +117,6 @@ private class DeleteWebEngageUserActor(
   val retryStep = 10
   val retryMax = 5
   self ! Start()
-  println("hi")
 
   override def receive(): Receive = {
 

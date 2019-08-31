@@ -7,17 +7,16 @@ import com.snapptrip.repos.WebEngageUserRepoImpl
 import com.snapptrip.services.WebEngage
 import spray.json._
 
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration.Duration
+import scala.concurrent.Future
 
 object DeleteWebEngageUsersUtil {
 
-  def deleteWebEngageUsersTable(): Future[Unit] = {
+  def deleteWebEngageUsersTable(): Future[Seq[Int]] = {
 
     println("delete webengage users started ...")
-    WebEngageUserRepoImpl.deletedUsersFinalGet.map { userIds =>
-      userIds.foreach { userId =>
-        println(userId)
+    for {
+      userIds <- WebEngageUserRepoImpl.deletedUsersFinalGet
+      seq <- Future.sequence(userIds.map { userId =>
         val result = for {
           ors <- WebEngage.opengdprRequests(OpengdprRequests(
             userId,
@@ -32,17 +31,16 @@ object DeleteWebEngageUsersUtil {
         } yield {
           println(ors)
           println(orsgs)
-          //    println(orsd)
-//          println(disabled)
+          disabled
         }
-        Await.result(result, Duration.Inf)
-//        result
-      }
-
+        result
+      })
+    } yield {
+      seq
     }
   }
-
 }
+
 //
 //object runner extends App {
 //  DeleteWebEngageUsersUtil.deleteWebEngageUsersTable()
