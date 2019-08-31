@@ -7,7 +7,7 @@ import akka.util.Timeout
 import com.snapptrip.DI._
 import com.snapptrip.api._
 import com.snapptrip.repos.database.DBSetup
-import com.snapptrip.utils.CommonDirectives
+import com.snapptrip.utils.{CommonDirectives, DeleteWebEngageUsersUtil}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 
@@ -36,7 +36,9 @@ object Main extends App with RequestTimeout with LazyLogging with CommonDirectiv
   bindingFuture.map { serverBinding =>
     logger.info(s"RestApi bound to ${serverBinding.localAddress} ")
   }.onComplete {
-    case scala.util.Success(_) => logger.info("Started ...")
+    case scala.util.Success(_) =>
+      logger.info("Started ...")
+      DeleteWebEngageUsersUtil.deleteWebEngageUsersTable()
     case scala.util.Failure(ex) =>
       logger.error(s"Failed to bind to $host:$httpPort!", ex)
       system.terminate()

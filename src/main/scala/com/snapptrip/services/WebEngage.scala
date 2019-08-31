@@ -10,14 +10,15 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.marshalling.Marshal
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
+import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.pattern.ask
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import com.snapptrip.DI.{ec, materializer, system}
-import com.snapptrip.api.Messages.{WebEngageEvent, WebEngageUserInfo, WebEngageUserInfoWithUserId}
+import com.snapptrip.api.Messages._
 import com.snapptrip.models.User
 import com.snapptrip.repos.WebEngageUserRepoImpl
-import com.snapptrip.utils.WebEngageConfig
+import com.snapptrip.utils.{DeleteWebEngageUsersUtil, WebEngageConfig}
 import com.snapptrip.utils.formatters.EmailFormatter
 import com.snapptrip.webengage.{SendEventInfo, SendUserInfo, WebengageService}
 import com.typesafe.scalalogging.LazyLogging
@@ -66,6 +67,62 @@ object WebEngage extends LazyLogging {
     }).recover {
       case error: Throwable =>
         logger.info(s"""response track events to web engage with result:${error.getMessage} with status: ${StatusCodes.InternalServerError}""")
+        (StatusCodes.InternalServerError, null)
+    }
+  }
+
+  def opengdprRequests(request: JsValue): Future[(StatusCode, JsValue)] = {
+    logger.info(s"""request post opengdpr to web engage with content:$request""")
+    (for {
+      body <- Marshal(request).to[RequestEntity]
+      request = HttpRequest(HttpMethods.POST, WebEngageConfig.opengdprRequestsUrl)
+        .withHeaders(RawHeader("Authorization", WebEngageConfig.apiKey))
+        .withEntity(body.withContentType(ContentTypes.`application/json`))
+      connectionFlow = Http().outgoingConnectionHttps(WebEngageConfig.host, settings = WebEngageConfig.clientConnectionSettings)
+      (status, responseBody) <- Source.single(request).via(connectionFlow).runWith(Sink.head).map(x => (x.status, x.entity))
+      entity <- Unmarshal(responseBody).to[JsValue]
+    } yield {
+      logger.info(s"""request post opengdpr to web engage with result:$entity with status: $status""")
+      (status, entity)
+    }).recover {
+      case error: Throwable =>
+        logger.info(s"""request post opengdpr to web engage with result:${error.getMessage} with status: ${StatusCodes.InternalServerError}""")
+        (StatusCodes.InternalServerError, null)
+    }
+  }
+
+  def opengdprRequestsGetStatus(requestId: String): Future[(StatusCode, JsValue)] = {
+    logger.info(s"""request get opengdpr status to web engage with content:$requestId""")
+    (for {
+      request <- Future.successful(HttpRequest(HttpMethods.GET, WebEngageConfig.opengdprRequestsUrl + s"""/$requestId""")
+        .withHeaders(RawHeader("Authorization", WebEngageConfig.apiKey)))
+      connectionFlow = Http().outgoingConnectionHttps(WebEngageConfig.host, settings = WebEngageConfig.clientConnectionSettings)
+      (status, responseBody) <- Source.single(request).via(connectionFlow).runWith(Sink.head).map(x => (x.status, x.entity))
+      entity <- Unmarshal(responseBody).to[JsValue]
+    } yield {
+      logger.info(s"""request get opengdpr status to web engage with result:$entity with status: $status""")
+      (status, entity)
+    }).recover {
+      case error: Throwable =>
+        logger.info(s"""request get opengdpr status to web engage with result:${error.getMessage} with status: ${StatusCodes.InternalServerError}""")
+        (StatusCodes.InternalServerError, null)
+    }
+  }
+
+  def opengdprRequestsDelete(requestId: String): Future[(StatusCode, JsValue)] = {
+    logger.info(s"""request delete opengdpr to web engage with content:$requestId""")
+    (for {
+      request <- Future.successful(HttpRequest(HttpMethods.DELETE, WebEngageConfig.opengdprRequestsUrl + s"""/$requestId""")
+        .withHeaders(RawHeader("Authorization", WebEngageConfig.apiKey)))
+      connectionFlow = Http().outgoingConnectionHttps(WebEngageConfig.host, settings = WebEngageConfig.clientConnectionSettings)
+      (status, responseBody) <- Source.single(request).via(connectionFlow).runWith(Sink.head).map(x => (x.status, x.entity))
+      entity <- Unmarshal(responseBody).to[JsValue]
+    } yield {
+      logger.info(s"""request delete opengdpr status to web engage with result:$entity with status: $status""")
+      (status, entity)
+    }).recover {
+      case error: Throwable =>
+        logger.info(s"""request delete opengdpr status to web engage with result:${error.getMessage} with status: ${StatusCodes.InternalServerError}""")
         (StatusCodes.InternalServerError, null)
     }
   }
