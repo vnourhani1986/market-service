@@ -164,6 +164,7 @@ object WebEngage extends LazyLogging {
 
   def converter(webEngageUserInfo: WebEngageUserInfo, oldUser: Option[User]): User = {
     User(
+      id = oldUser.flatMap(_.id),
       userName = webEngageUserInfo.user_name.orElse(oldUser.get.userName),
       userId = oldUser.get.userId,
       name = webEngageUserInfo.name.orElse(oldUser.get.name),

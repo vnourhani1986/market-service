@@ -63,6 +63,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
 
   override def get: Future[Seq[User]] = {
     val query = userTable
+        .take(100)
     db.run(query.result)
   }
 
@@ -79,7 +80,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
         .filter(table => table.email === e)
       case (None, None) => userTable
         .take(0)
-    }).sortBy(table => (table.mobileNo, table.email)).result.headOption
+    }).sortBy(x => (x.mobileNo, x.email)).result.headOption
 
     db.run(query)
 
@@ -98,7 +99,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
         .filter(table => table.email === e)
       case (None, None) => userTable
         .take(0)
-    }).sortBy(table => (table.mobileNo, table.email)).result.headOption
+    }).sortBy(x => (x.mobileNo, x.email)).result.headOption
 
     db.run(query)
 
@@ -117,7 +118,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
         .filter(table => table.email === e)
       case (None, None) => userTable
         .take(0)
-    }).sortBy(table => (table.mobileNo, table.email)).result
+    }).sortBy(x => (x.mobileNo, x.email)).result
 
     db.run(query)
 
@@ -126,28 +127,16 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
   override def save(user: User): Future[User] = {
 
     val action = userTable returning userTable.map(_.id) into ((table, id) =>
-      table.copy(id = Some(id))) += User(None, user.userName, user.userId,
-      DateTimeUtils.nowOpt, None, user.name, user.family, user.email, user.originEmail, user.mobileNo, user.birthDate, user.gender, user.provider, disabled = user.disabled)
+      table.copy(id = Some(id))) += user
     db.run(action)
 
   }
 
   override def update(user: User): Future[Boolean] = {
 
-    val action = ((user.mobileNo, user.email) match {
-      case (Some(m), Some(e)) =>  userTable
-        .filter(table => table.mobileNo === m && table.email === e)
-      case (Some(m), None) => userTable
-        .filter(table => table.mobileNo === m)
-      case (None, Some(e)) => userTable
-        .filter(table => table.email === e)
-      case (None, None) => userTable
-        .take(0)
-    }).sortBy(table => (table.mobileNo, table.email))
-      .take(1)
-      .map(x => (x.userName, x.name, x.family, x.email, x.originEmail, x.mobileNo, x.birthDate, x.gender, x.modifiedAt, x.disabled, x.provider))
-      .update((user.userName, user.name, user.family, user.email, user.originEmail, user.mobileNo, user.birthDate, user.gender, DateTimeUtils.nowOpt,
-        user.disabled, user.provider))
+    val action = userTable
+        .filter(_.id === user.id)
+        .update(user)
 
     db.run(action).map(_ > 0)
 
@@ -220,4 +209,8 @@ private[repos] trait WebEngageUserTableComponent extends SlickSupport {
 
   protected val userTable = TableQuery[UserTable]
 
+}
+
+object runner extends App {
+  WebEngageUserRepoImpl.find(Some("9122067123"), None).map(println)
 }
