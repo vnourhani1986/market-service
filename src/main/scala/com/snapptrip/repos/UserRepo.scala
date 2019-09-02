@@ -210,7 +210,3 @@ private[repos] trait WebEngageUserTableComponent extends SlickSupport {
   protected val userTable = TableQuery[UserTable]
 
 }
-
-object runner extends App {
-  WebEngageUserRepoImpl.find(Some("9113547817"), None).map(println)
-}
