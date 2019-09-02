@@ -80,7 +80,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
         .filter(table => table.email === e)
       case (None, None) => userTable
         .take(0)
-    }).result.headOption
+    }).sortBy(x => (x.mobileNo.desc, x.email.desc)).result.headOption
 
     db.run(query)
 
@@ -99,7 +99,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
         .filter(table => table.email === e)
       case (None, None) => userTable
         .take(0)
-    }).result.headOption
+    }).sortBy(x => (x.mobileNo.desc, x.email.desc)).result.headOption
 
     db.run(query)
 
@@ -118,7 +118,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
         .filter(table => table.email === e)
       case (None, None) => userTable
         .take(0)
-    }).result
+    }).sortBy(x => (x.mobileNo.desc, x.email.desc)).result
 
     db.run(query)
 
@@ -209,4 +209,8 @@ private[repos] trait WebEngageUserTableComponent extends SlickSupport {
 
   protected val userTable = TableQuery[UserTable]
 
+}
+
+object runner extends App {
+  WebEngageUserRepoImpl.find(Some("9113547817"), None).map(println)
 }
