@@ -80,7 +80,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
         .filter(table => table.email === e)
       case (None, None) => userTable
         .take(0)
-    }).sortBy(x => (x.mobileNo, x.email)).result.headOption
+    }).result.headOption
 
     db.run(query)
 
@@ -99,7 +99,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
         .filter(table => table.email === e)
       case (None, None) => userTable
         .take(0)
-    }).sortBy(x => (x.mobileNo, x.email)).result.headOption
+    }).result.headOption
 
     db.run(query)
 
@@ -118,7 +118,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
         .filter(table => table.email === e)
       case (None, None) => userTable
         .take(0)
-    }).sortBy(x => (x.mobileNo, x.email)).result
+    }).result
 
     db.run(query)
 
