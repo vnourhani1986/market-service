@@ -143,7 +143,7 @@ object WebEngage extends LazyLogging {
       (user.right.get._1, user.right.get._2)
     }).recover {
       case error: Throwable =>
-        (WebEngageUserInfoWithUserId(userId = "-1"), 500)
+        (WebEngageUserInfoWithUserId(userId = error.getMessage), 500)
     }
   }
 
