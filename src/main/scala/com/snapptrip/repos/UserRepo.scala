@@ -91,7 +91,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
     val em = EmailFormatter.format(email)
 
     val query = ((mobileNo, em) match {
-      case (Some(m), Some(e)) =>  userTable
+      case (Some(m), Some(e)) => userTable
         .filter(table => table.mobileNo === m && table.email === e)
       case (Some(m), None) => userTable
         .filter(table => table.mobileNo === m)
@@ -209,8 +209,4 @@ private[repos] trait WebEngageUserTableComponent extends SlickSupport {
 
   protected val userTable = TableQuery[UserTable]
 
-}
-
-object runner extends App {
-  WebEngageUserRepoImpl.find(Some("9122067123"), None).map(println)
 }
