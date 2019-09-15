@@ -4,13 +4,13 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, PoisonPill, Props}
 import akka.http.scaladsl.model.StatusCodes
 import akka.pattern.ask
 import akka.util.Timeout
-import com.snapptrip.formats.Formats._
+import com.snapptrip.DI._
 import com.snapptrip.api.Messages.WebEngageUserInfoWithUserId
+import com.snapptrip.formats.Formats._
 import com.snapptrip.webengage.actor.WebEngageActor.{SendEventInfo, SendUserInfo}
 import com.snapptrip.webengage.api.WebEngageApi
 import com.typesafe.scalalogging.LazyLogging
 import spray.json._
-import com.snapptrip.DI._
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{FiniteDuration, _}
@@ -25,6 +25,8 @@ object WebEngageActor {
 
   case class SendEventInfo(event: JsValue, retryCount: Int)
 
+  case class Start()
+
 }
 
 class WebEngageActor(
@@ -33,6 +35,7 @@ class WebEngageActor(
                       ec: ExecutionContext,
                       timeout: Timeout
                     ) extends Actor with LazyLogging {
+
 
   val retryStep = 10
   val retryMax = 5

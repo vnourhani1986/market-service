@@ -1,6 +1,5 @@
 package com.snapptrip.repos
 
-import java.sql.{Date, Timestamp}
 import java.time.{LocalDate, LocalDateTime}
 
 import com.snapptrip.DI._
@@ -22,6 +21,12 @@ trait WebEngageUserRepo {
   def findOrCreateByUserName(userName: Option[String]): Future[User]
 
   def get: Future[Seq[User]]
+
+  def get(take: Int): Future[Seq[User]]
+
+  def deletedUsersFinalGet: Future[Seq[String]]
+
+  def deletedUsersFinalUpdate(userId: String, disabled: Boolean, deleted: Boolean): Future[Int]
 
   def findByFilter(filter: WebEngageUserInfo): Future[Option[User]]
 
@@ -63,8 +68,30 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
 
   override def get: Future[Seq[User]] = {
     val query = userTable
-        .take(100)
+      .take(100)
+      .filter(_.disabled === false)
+      .filter(_.deleted === false)
     db.run(query.result)
+  }
+
+  override def get(take: Int): Future[Seq[User]] = {
+    val query = userTable
+      .filter(_.disabled === false)
+      .filter(_.deleted === false)
+      .take(take)
+    db.run(query.result)
+  }
+
+  override def deletedUsersFinalGet: Future[Seq[String]] = {
+    val query = sql"""SELECT user_id from delete_users_final where disabled = false and deleted = false limit 1;"""
+      .as[String]
+    db.run(query)
+  }
+
+  override def deletedUsersFinalUpdate(userId: String, disabled: Boolean, deleted: Boolean): Future[Int] = {
+    val query = sql"""update delete_users_final SET (disabled, deleted) = ($disabled, $deleted) where user_id = $userId;"""
+      .as[Int]
+    db.run(query).map(_.head)
   }
 
   override def findByFilter(filter: WebEngageUserInfo): Future[Option[User]] = {
@@ -72,7 +99,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
     val em = EmailFormatter.format(filter.email)
 
     val query = ((filter.mobile_no, em) match {
-      case (Some(m), Some(e)) =>  userTable
+      case (Some(m), Some(e)) => userTable
         .filter(table => table.mobileNo === m && table.email === e)
       case (Some(m), None) => userTable
         .filter(table => table.mobileNo === m)
@@ -110,10 +137,10 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
     val em = EmailFormatter.format(email)
 
     val query = ((mobileNo, em) match {
-      case (Some(m), Some(e)) =>  userTable
-          .filter(table => table.mobileNo === m && table.email === e)
+      case (Some(m), Some(e)) => userTable
+        .filter(table => table.mobileNo === m && table.email === e)
       case (Some(m), None) => userTable
-          .filter(table => table.mobileNo === m)
+        .filter(table => table.mobileNo === m)
       case (None, Some(e)) => userTable
         .filter(table => table.email === e)
       case (None, None) => userTable
@@ -134,9 +161,19 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
 
   override def update(user: User): Future[Boolean] = {
 
-    val action = userTable
-        .filter(_.id === user.id)
-        .update(user)
+    val action = ((user.mobileNo, user.email) match {
+      case (Some(m), Some(e)) => userTable
+        .filter(table => table.mobileNo === m && table.email === e)
+      case (Some(m), None) => userTable
+        .filter(table => table.mobileNo === m)
+      case (None, Some(e)) => userTable
+        .filter(table => table.email === e)
+      case (None, None) => userTable
+    }).sortBy(table => (table.mobileNo, table.email))
+      .take(1)
+      .map(x => (x.userName, x.name, x.family, x.email, x.originEmail, x.mobileNo, x.birthDate, x.gender, x.modifiedAt, x.disabled, x.provider))
+      .update((user.userName, user.name, user.family, user.email, user.originEmail, user.mobileNo, user.birthDate, user.gender, DateTimeUtils.nowOpt,
+        user.disabled, user.provider))
 
     db.run(action).map(_ > 0)
 
