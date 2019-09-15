@@ -4,10 +4,10 @@ import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, Props}
-import akka.pattern.ask
+import akka.pattern.{ask, pipe}
 import akka.routing.{DefaultResizer, RoundRobinPool}
 import akka.util.Timeout
-import com.snapptrip.DI.system
+import com.snapptrip.DI._
 import com.snapptrip.api.Messages.{WebEngageEvent, WebEngageUserInfo, WebEngageUserInfoWithUserId}
 import com.snapptrip.kafka.Publisher
 import com.snapptrip.models.User
@@ -18,6 +18,8 @@ import com.snapptrip.utils.formatters.EmailFormatter
 import com.snapptrip.webengage.ClientActor.{CheckUser, RegisterUser, Start, TrackEvent}
 import com.typesafe.scalalogging.LazyLogging
 import spray.json._
+import scala.concurrent.duration._
+import com.snapptrip.formats.Formats._
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
@@ -41,19 +43,21 @@ class ClientActor(
 
     case RegisterUser(user) =>
 
-      sender() ! userCheck(user)
+      val ref = sender()
+      userCheck(user).pipeTo(ref)
 
     case CheckUser(user) =>
 
-      sender() ! userCheck(user)
+        val ref = sender()
+        userCheck(user).pipeTo(ref)
 
     case TrackEvent(event) =>
 
-      sender() ! trackEventWithoutUserId(event)
+      val ref = sender()
+      trackEventWithoutUserId(event).pipeTo(ref)
 
     case _ =>
       logger.info(s"""welcome to client actor""")
-      sender ? JsObject("status" -> JsString("success"), "data" -> JsString(s"""welcome to client actor"""))
 
   }
 
@@ -82,11 +86,11 @@ class ClientActor(
         }
       }
       _ <- user match {
-        case Right(u) => Publisher.publish((u._1.userId, "track-user"), List())
+        case Right(u) => Publisher.publish((u._1.userId, "track-user"), List(u._1.toJson))
         case Left(e) => Future.failed(e)
       }
     } yield {
-      (user.right.get._1, user.right.get._2)
+      user.right.get
     }).recover {
       case error: Throwable =>
         (WebEngageUserInfoWithUserId(userId = "-1"), 500)
@@ -95,6 +99,7 @@ class ClientActor(
   }
 
   def trackEventWithoutUserId(request: WebEngageEvent): Future[(Boolean, JsObject)] = {
+
     val user = request.user
     val event = request.event
     (for {
@@ -131,6 +136,7 @@ class ClientActor(
         println(error.getMessage)
         (false, JsObject("status" -> JsString("failed")))
     }
+
   }
 
   def retry(issueRequest: WebEngageUserInfoWithUserId, time: FiniteDuration, retryCount: Int): Cancellable = {
@@ -145,8 +151,9 @@ class ClientActor(
 
 object ClientActor {
 
+  private implicit val timeout: Timeout = Timeout(1.minute)
   val resizer = DefaultResizer(lowerBound = 5, upperBound = 50)
-//  val clientActor: ActorRef = system.actorOf(RoundRobinPool(10, Some(resizer)).props(Props[ClientActor]), s"client-actor-${Random.nextInt}")
+  val clientActor: ActorRef = system.actorOf(RoundRobinPool(10, Some(resizer)).props(Props(new ClientActor)), s"client-actor-${Random.nextInt}")
 
   case class Start()
 

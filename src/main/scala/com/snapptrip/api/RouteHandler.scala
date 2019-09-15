@@ -19,7 +19,7 @@ import com.snapptrip.webengage.ClientActor
 import com.typesafe.scalalogging.LazyLogging
 import spray.json.{JsNumber, JsObject, JsString, JsValue}
 import akka.pattern.ask
-import com.snapptrip.webengage.ClientActor.CheckUser
+import com.snapptrip.webengage.ClientActor.{CheckUser, TrackEvent}
 
 import scala.concurrent.ExecutionContextExecutor
 
@@ -143,7 +143,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
               entity(as[WebEngageEvent]) { body1 =>
                 val body = body1.copy(user = body1.user.copy(mobile_no = format(body1.user.mobile_no)))
                 logger.info(s"""post events request by body $body""")
-                onSuccess(WebEngage.trackEventWithoutUserId(body)) {
+                onSuccess(ClientActor.clientActor.ask(TrackEvent(body)).mapTo[(Boolean, JsObject)]) {
                   case (status, entity) if status =>
                     logger.info(s"""post events response by result: $entity and status: $status""")
                     val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
@@ -248,7 +248,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
                   val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
                   complete(HttpResponse(status = StatusCodes.BadRequest).withEntity(httpEntity))
                 } else {
-                  onSuccess(WebEngage.userCheck(body)) {
+                  onSuccess(ClientActor.clientActor.ask(CheckUser(body)).mapTo[(WebEngageUserInfoWithUserId, Int)]) {
                     case (user, status) if status == 200 || status == 201 =>
                       logger.info(s"""post check user response by status: $status""")
                       val entity = JsObject(
@@ -286,7 +286,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
                   val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
                   complete(HttpResponse(status = StatusCodes.BadRequest).withEntity(httpEntity))
                 } else {
-                  onSuccess(WebEngage.userCheck(body)) {
+                  onSuccess(ClientActor.clientActor.ask(CheckUser(body)).mapTo[(WebEngageUserInfoWithUserId, Int)]) {
                     case (_, status) if status == 200 || status == 201 =>
                       logger.info(s"""post register user response by status: $status""")
                       val entity = JsObject(
