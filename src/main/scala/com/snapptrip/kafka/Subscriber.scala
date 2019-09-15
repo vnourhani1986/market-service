@@ -1,12 +1,14 @@
 package com.snapptrip.kafka
 
-import com.snapptrip.DI._
-import com.snapptrip.kafka.Core._
 import akka.Done
 import akka.kafka.scaladsl.Consumer.DrainingControl
 import akka.kafka.scaladsl.{Committer, Consumer}
 import akka.kafka.{CommitterSettings, ConsumerSettings, Subscriptions}
 import akka.stream.scaladsl.{Keep, Sink}
+import com.snapptrip.DI._
+import com.snapptrip.kafka.Core._
+import com.snapptrip.webengage.actor.SubscriberActor
+import com.snapptrip.webengage.actor.SubscriberActor.NewRequest
 
 import scala.collection.immutable
 import scala.concurrent.Future
@@ -31,9 +33,8 @@ object Subscriber {
       .mapMaterializedValue(DrainingControl.apply)
       .run()
 
-
   def get(key: String, value: String): Future[Done] = {
-    println(key, value)
+    SubscriberActor.subscriberActor ! NewRequest(key, value)
     Future.successful(Done)
   }
 

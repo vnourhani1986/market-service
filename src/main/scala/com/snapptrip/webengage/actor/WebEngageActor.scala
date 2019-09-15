@@ -1,6 +1,6 @@
 package com.snapptrip.webengage.actor
 
-import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, PoisonPill, Props}
 import akka.http.scaladsl.model.StatusCodes
 import akka.pattern.ask
 import akka.util.Timeout
@@ -11,6 +11,7 @@ import com.snapptrip.webengage.api.WebEngageApi
 import com.typesafe.scalalogging.LazyLogging
 import spray.json._
 import com.snapptrip.DI._
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{FiniteDuration, _}
 import scala.util.Random
@@ -45,6 +46,7 @@ class WebEngageActor(
         .map {
           case (status, _) if status == StatusCodes.Created =>
             logger.info(s"""receive user info actor from webengage status $status""")
+            self ! PoisonPill
           case (status, _) if status == StatusCodes.InternalServerError =>
             logger.info(s"""receive user info from webengage status $status""")
             if (retryCount < retryMax) {
@@ -66,6 +68,7 @@ class WebEngageActor(
         .map {
           case (status, _) if status == StatusCodes.Created =>
             logger.info(s"""receive event info actor from webengage status $status""")
+            self ! PoisonPill
           case (status, _) if status == StatusCodes.InternalServerError =>
             logger.info(s"""receive event info actor from webengage status $status""")
             if (retryCount < retryMax) {
@@ -83,6 +86,7 @@ class WebEngageActor(
     case _ =>
       logger.info(s"""other messages""")
       sender ? JsObject("status" -> JsString("success"))
+      self ! PoisonPill
 
   }
 

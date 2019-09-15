@@ -20,6 +20,8 @@ object Core {
   val topic: String = config.getString("kafka.topic")
   //  def this(kafkaPort: Int) = this(kafkaPort, kafkaPort + 1, ActorSystem("FTMS"))
 
+  case class Key(userId: String, keyType: String)
+
   def log: Logger = LoggerFactory.getLogger(getClass)
 
   def bootstrapServers: String = conf.getString("kafka.bootstrap.servers")

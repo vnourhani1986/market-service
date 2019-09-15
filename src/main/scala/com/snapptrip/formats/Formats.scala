@@ -6,6 +6,7 @@ import java.util.UUID
 
 import com.snapptrip.api.HealthCheckResponse
 import com.snapptrip.api.Messages._
+import com.snapptrip.kafka.Core.Key
 import com.snapptrip.models._
 import com.snapptrip.utils.{HttpError, MetaData}
 import com.sun.xml.internal.bind.v2.model.core.ID
@@ -40,7 +41,7 @@ trait FormatsComponent extends JsonProtocol {
   implicit val webEngageUserWithUserIdInfoFormat = jsonFormat7(WebEngageUserInfoWithUserId)
   implicit val eventUserInfoFormat = jsonFormat2(EventUserInfo)
   implicit val webEngageEventFormat = jsonFormat2(WebEngageEvent)
-
+  implicit val keyFormat = jsonFormat2(Key)
 }
 
 

@@ -10,6 +10,7 @@ import akka.util.Timeout
 import com.snapptrip.DI._
 import com.snapptrip.api.Messages.{WebEngageEvent, WebEngageUserInfo, WebEngageUserInfoWithUserId}
 import com.snapptrip.formats.Formats._
+import com.snapptrip.kafka.Core.Key
 import com.snapptrip.kafka.Publisher
 import com.snapptrip.models.User
 import com.snapptrip.repos.WebEngageUserRepoImpl
@@ -84,14 +85,14 @@ class ClientActor(
         }
       }
       _ <- user match {
-        case Right(u) => Publisher.publish((u._1.userId, "track-user"), List(u._1.toJson))
+        case Right(u) => Publisher.publish(Key(u._1.userId, "track-user"), List(u._1.toJson))
         case Left(e) => Future.failed(e)
       }
     } yield {
       user.right.get
     }).recover {
       case error: Throwable =>
-        (WebEngageUserInfoWithUserId(userId = "-1"), 500)
+        (WebEngageUserInfoWithUserId(userId = error.getMessage), 500)
     }
 
   }
@@ -126,7 +127,7 @@ class ClientActor(
           (userIdOpt.get, jContent)
         }
       }
-      _ <- Publisher.publish((userId, "track-event"), List(newRequest))
+      _ <- Publisher.publish(Key(userId, "track-event"), List(newRequest))
     } yield {
       (true, JsObject("status" -> JsString("success")))
     }).recover {
