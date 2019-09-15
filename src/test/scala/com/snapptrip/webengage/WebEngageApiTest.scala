@@ -5,10 +5,11 @@ import akka.testkit.{ImplicitSender, TestKit}
 import akka.util.Timeout
 import com.snapptrip.DI.{ec, system}
 import com.snapptrip.api.Messages.WebEngageEvent
-import com.snapptrip.services.WebEngage
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import spray.json.JsonParser
 import com.snapptrip.formats.Formats._
+import com.snapptrip.webengage.api.WebEngageApi
+
 import scala.concurrent.duration._
 
 class WebEngageApiTest extends TestKit(system) with ImplicitSender
@@ -60,8 +61,8 @@ class WebEngageApiTest extends TestKit(system) with ImplicitSender
         }"""
 
       for {
-        userResponse <- WebEngage.trackUser(JsonParser(user))
-        eventResponse <- WebEngage.trackEventWithoutUserId(JsonParser(event).convertTo[WebEngageEvent])
+        userResponse <- WebEngageApi.trackUser(JsonParser(user))
+        eventResponse <- WebEngageApi.trackEventWithoutUserId(JsonParser(event).convertTo[WebEngageEvent])
       } yield {
         assert(userResponse._1 == StatusCodes.OK && eventResponse._1)
       }

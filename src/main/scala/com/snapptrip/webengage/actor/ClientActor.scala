@@ -1,27 +1,25 @@
-package com.snapptrip.webengage
+package com.snapptrip.webengage.actor
 
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
-import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, Props}
-import akka.pattern.{ask, pipe}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.pattern.pipe
 import akka.routing.{DefaultResizer, RoundRobinPool}
 import akka.util.Timeout
 import com.snapptrip.DI._
 import com.snapptrip.api.Messages.{WebEngageEvent, WebEngageUserInfo, WebEngageUserInfoWithUserId}
+import com.snapptrip.formats.Formats._
 import com.snapptrip.kafka.Publisher
 import com.snapptrip.models.User
 import com.snapptrip.repos.WebEngageUserRepoImpl
-import com.snapptrip.services.WebEngage.converter
 import com.snapptrip.utils.WebEngageConfig
 import com.snapptrip.utils.formatters.EmailFormatter
-import com.snapptrip.webengage.ClientActor.{CheckUser, RegisterUser, Start, TrackEvent}
+import com.snapptrip.webengage.actor.ClientActor.{CheckUser, RegisterUser, Start, TrackEvent, _}
 import com.typesafe.scalalogging.LazyLogging
 import spray.json._
-import scala.concurrent.duration._
-import com.snapptrip.formats.Formats._
 
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Random, Try}
 
@@ -48,8 +46,8 @@ class ClientActor(
 
     case CheckUser(user) =>
 
-        val ref = sender()
-        userCheck(user).pipeTo(ref)
+      val ref = sender()
+      userCheck(user).pipeTo(ref)
 
     case TrackEvent(event) =>
 
@@ -128,7 +126,7 @@ class ClientActor(
           (userIdOpt.get, jContent)
         }
       }
-      _ <- Publisher.publish((userId, "track-event"), List(newRequest)) //actor ? SendEventInfo(newRequest, 1)
+      _ <- Publisher.publish((userId, "track-event"), List(newRequest))
     } yield {
       (true, JsObject("status" -> JsString("success")))
     }).recover {
@@ -139,21 +137,13 @@ class ClientActor(
 
   }
 
-  def retry(issueRequest: WebEngageUserInfoWithUserId, time: FiniteDuration, retryCount: Int): Cancellable = {
-    context.system.scheduler.scheduleOnce(time, self, SendUserInfo(issueRequest, retryCount))
-  }
-
-  def retry(issueRequest: JsValue, time: FiniteDuration, retryCount: Int): Cancellable = {
-    context.system.scheduler.scheduleOnce(time, self, SendEventInfo(issueRequest, retryCount))
-  }
-
 }
 
 object ClientActor {
 
   private implicit val timeout: Timeout = Timeout(1.minute)
-  val resizer = DefaultResizer(lowerBound = 5, upperBound = 50)
-  val clientActor: ActorRef = system.actorOf(RoundRobinPool(10, Some(resizer)).props(Props(new ClientActor)), s"client-actor-${Random.nextInt}")
+  val resizer = DefaultResizer(lowerBound = 2, upperBound = 25)
+  val clientActor: ActorRef = system.actorOf(RoundRobinPool(10, Some(resizer)).props(Props(new ClientActor)), s"client-Actor-${Random.nextInt}")
 
   case class Start()
 

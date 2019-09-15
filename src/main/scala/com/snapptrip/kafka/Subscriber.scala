@@ -11,7 +11,7 @@ import akka.stream.scaladsl.{Keep, Sink}
 import scala.collection.immutable
 import scala.concurrent.Future
 
-class Subscriber {
+object Subscriber {
 
   private lazy val committerDefaultsInstance = CommitterSettings(system)
 

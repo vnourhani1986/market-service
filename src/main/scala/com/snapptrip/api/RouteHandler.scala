@@ -13,13 +13,14 @@ import com.snapptrip.formats.Formats._
 import com.snapptrip.notification.email.EmailService
 import com.snapptrip.notification.sms.SmsService
 import com.snapptrip.repos.BusinessRepoImpl
-import com.snapptrip.services.WebEngage
 import com.snapptrip.utils.formatters.MobileNoFormatter._
-import com.snapptrip.webengage.ClientActor
 import com.typesafe.scalalogging.LazyLogging
 import spray.json.{JsNumber, JsObject, JsString, JsValue}
 import akka.pattern.ask
-import com.snapptrip.webengage.ClientActor.{CheckUser, TrackEvent}
+
+import com.snapptrip.webengage.actor.ClientActor.{CheckUser, TrackEvent}
+import com.snapptrip.webengage.actor.ClientActor
+import com.snapptrip.webengage.api.WebEngageApi
 
 import scala.concurrent.ExecutionContextExecutor
 
@@ -122,7 +123,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
           headerValue(extractToken(token)) { _ =>
             entity(as[JsValue]) { body =>
               logger.info(s"""post users request by body $body""")
-              onSuccess(WebEngage.trackUser(body)) {
+              onSuccess(WebEngageApi.trackUser(body)) {
                 case (status, entity) if status == StatusCodes.Created =>
                   logger.info(s"""post users response by result: $entity and status: $status""")
                   complete(HttpResponse(status = status).withEntity(entity))
