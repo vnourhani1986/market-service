@@ -72,7 +72,10 @@ libraryDependencies ++= {
     "com.lightbend.akka"          %% "akka-stream-alpakka-slick" % "1.0-M1",
 
     // jalcal converter
-    "com.github.sbahmani"         % "jalcal"                % "1.4"
+    "com.github.sbahmani"         % "jalcal"                % "1.4",
+
+    // kafka
+    "com.typesafe.akka"           %% "akka-stream-kafka"    % "1.0-RC1"
 
   )
 }

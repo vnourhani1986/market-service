@@ -15,8 +15,11 @@ import com.snapptrip.notification.sms.SmsService
 import com.snapptrip.repos.BusinessRepoImpl
 import com.snapptrip.services.WebEngage
 import com.snapptrip.utils.formatters.MobileNoFormatter._
+import com.snapptrip.webengage.ClientActor
 import com.typesafe.scalalogging.LazyLogging
 import spray.json.{JsNumber, JsObject, JsString, JsValue}
+import akka.pattern.ask
+import com.snapptrip.webengage.ClientActor.CheckUser
 
 import scala.concurrent.ExecutionContextExecutor
 
