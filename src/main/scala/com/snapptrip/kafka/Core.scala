@@ -26,7 +26,6 @@ object Core {
 
   println("the bootstrap kafka server ::::: " + bootstrapServers)
 
-
   val DefaultKey = "key"
   val InitialMsg =
     "initial msg in topic, required to create the topic before any consumer subscribes to it"
