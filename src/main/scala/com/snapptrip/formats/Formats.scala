@@ -23,6 +23,7 @@ trait FormatsComponent extends JsonProtocol {
   implicit val newUserFormater = jsonFormat7(NewUser)
   implicit val editUserFormater = jsonFormat7(EditUser)
   implicit val userFormater = jsonFormat15(User)
+  implicit val userDBFromatFormater = jsonFormat15(UserDBFormat)
   implicit val userLoginInfoFormat = jsonFormat2(UserLoginInfo)
   implicit val userLoginRequestFormat = jsonFormat3(UserLoginRequest)
   implicit val healthCheckResponseFormatter = jsonFormat4(HealthCheckResponse)
