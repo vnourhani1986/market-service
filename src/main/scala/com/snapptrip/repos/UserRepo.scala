@@ -1,15 +1,16 @@
 package com.snapptrip.repos
 
-import java.sql.{Date, Timestamp}
+import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, LocalDateTime}
 
 import com.snapptrip.DI._
 import com.snapptrip.api.Messages.WebEngageUserInfo
-import com.snapptrip.models.User
-import com.snapptrip.utils.DateTimeUtils
+import com.snapptrip.formats.Formats._
+import com.snapptrip.models.{User, UserDBFormat}
 import com.snapptrip.utils.PostgresProfiler.api._
 import com.snapptrip.utils.formatters.EmailFormatter
 import slick.lifted.ProvenShape
+import spray.json.JsonParser
 
 import scala.concurrent.Future
 
@@ -63,7 +64,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
 
   override def get: Future[Seq[User]] = {
     val query = userTable
-        .take(100)
+      .take(100)
     db.run(query.result)
   }
 
@@ -71,18 +72,11 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
 
     val em = EmailFormatter.format(filter.email)
 
-    val query = ((filter.mobile_no, em) match {
-      case (Some(m), Some(e)) =>  userTable
-        .filter(table => table.mobileNo === m && table.email === e)
-      case (Some(m), None) => userTable
-        .filter(table => table.mobileNo === m)
-      case (None, Some(e)) => userTable
-        .filter(table => table.email === e)
-      case (None, None) => userTable
-        .take(0)
-    }).sortBy(x => (x.mobileNo.desc, x.email.desc)).result.headOption
-
-    db.run(query)
+    val e = em.map(x => s"""'$x'""").getOrElse(s"""null""")
+    val m = filter.mobile_no.map(x => s"""'$x'""").getOrElse(s"""null""")
+    val query = sql"""SELECT * from ptp_fn_find_user(#$e, #$m);"""
+      .as[Option[String]]
+    db.run(query).map(_.map (_.map( r => get(r) )).headOption.flatten)
 
   }
 
@@ -90,18 +84,11 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
 
     val em = EmailFormatter.format(email)
 
-    val query = ((mobileNo, em) match {
-      case (Some(m), Some(e)) => userTable
-        .filter(table => table.mobileNo === m && table.email === e)
-      case (Some(m), None) => userTable
-        .filter(table => table.mobileNo === m)
-      case (None, Some(e)) => userTable
-        .filter(table => table.email === e)
-      case (None, None) => userTable
-        .take(0)
-    }).sortBy(x => (x.mobileNo.desc, x.email.desc)).result.headOption
-
-    db.run(query)
+    val e = em.map(x => s"""'$x'""").getOrElse(s"""null""")
+    val m = mobileNo.map(x => s"""'$x'""").getOrElse(s"""null""")
+    val query = sql"""SELECT * from ptp_fn_find_user(#$e, #$m);"""
+      .as[Option[String]]
+    db.run(query).map(_.map (_.map( r => get(r) )).headOption.flatten)
 
   }
 
@@ -109,18 +96,13 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
 
     val em = EmailFormatter.format(email)
 
-    val query = ((mobileNo, em) match {
-      case (Some(m), Some(e)) =>  userTable
-          .filter(table => table.mobileNo === m && table.email === e)
-      case (Some(m), None) => userTable
-          .filter(table => table.mobileNo === m)
-      case (None, Some(e)) => userTable
-        .filter(table => table.email === e)
-      case (None, None) => userTable
-        .take(0)
-    }).sortBy(x => (x.mobileNo.desc, x.email.desc)).result
-
-    db.run(query)
+    val e = em.map(x => s"""'$x'""").getOrElse(s"""null""")
+    val m = mobileNo.map(x => s"""'$x'""").getOrElse(s"""null""")
+    val query = sql"""SELECT * from ptp_fn_find_user(#$e, #$m);"""
+      .as[String]
+    db.run(query).map(res => {
+      res.map { r => get(r) }
+    })
 
   }
 
@@ -135,8 +117,8 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
   override def update(user: User): Future[Boolean] = {
 
     val action = userTable
-        .filter(_.id === user.id)
-        .update(user)
+      .filter(_.id === user.id)
+      .update(user)
 
     db.run(action).map(_ > 0)
 
@@ -149,6 +131,19 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
       .map(_.disabled)
 
     db.run(query.result.head)
+
+  }
+
+  def get(result: String): User = {
+
+    val u = JsonParser(result).convertTo[UserDBFormat]
+    User(u.id, u.user_name, u.user_id,
+      u.created_at.map(x => LocalDateTime.parse(x, DateTimeFormatter.ISO_LOCAL_DATE_TIME)),
+      u.modified_at.map(x => LocalDateTime.parse(x, DateTimeFormatter.ISO_LOCAL_DATE_TIME)),
+      u.name, u.family, u.email, u.origin_email, u.mobile_no,
+      u.birth_date.map(x => LocalDate.parse(x, DateTimeFormatter.ISO_LOCAL_DATE)),
+      u.gender, u.provider, u.disabled, u.deleted
+    )
 
   }
 
