@@ -1,6 +1,7 @@
 package com.snapptrip.webengage.actor
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, PoisonPill, Props}
+import akka.dispatch.ControlMessage
 import akka.http.scaladsl.model.StatusCodes
 import akka.pattern.ask
 import akka.util.Timeout
@@ -21,9 +22,9 @@ object WebEngageActor {
   private implicit val timeout: Timeout = Timeout(1.minute)
   val webEngageActor: ActorRef = system.actorOf(Props(new WebEngageActor), s"webengage-actor-${Random.nextInt}")
 
-  case class SendUserInfo(user: WebEngageUserInfoWithUserId, retryCount: Int)
+  case class SendUserInfo(user: WebEngageUserInfoWithUserId, retryCount: Int) extends ControlMessage
 
-  case class SendEventInfo(event: JsValue, retryCount: Int)
+  case class SendEventInfo(event: JsValue, retryCount: Int) extends ControlMessage
 
 }
 
@@ -99,3 +100,5 @@ class WebEngageActor(
   }
 
 }
+
+

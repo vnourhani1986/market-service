@@ -1,9 +1,12 @@
 package com.snapptrip.webengage
 
+import akka.actor.Props
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import akka.util.Timeout
 import com.snapptrip.DI.{ec, materializer, system}
 import com.snapptrip.api.Messages.WebEngageUserInfoWithUserId
+import com.snapptrip.webengage.actor.WebEngageActor
+import com.snapptrip.webengage.actor.WebEngageActor.SendUserInfo
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import spray.json.{JsObject, JsString}
 
@@ -22,7 +25,7 @@ class WebEngageActorTest extends TestKit(system) with ImplicitSender
 
     "send back messages :" in {
 
-      val service = new WebengageService
+      val actor = system.actorOf(Props(new WebEngageActor), "fghjkl")
 
       val user = WebEngageUserInfoWithUserId(
         userId = "c3df9e0a-9695-4b12-9e4f-b74b9d15438d",
@@ -34,7 +37,7 @@ class WebEngageActorTest extends TestKit(system) with ImplicitSender
         gender = Some("male")
       )
 
-      service.actor ! SendUserInfo(user, 1)
+      actor ! SendUserInfo(user, 1)
       Thread.sleep(3000)
       expectMsg((200, JsObject("status" -> JsString("success"))))
 

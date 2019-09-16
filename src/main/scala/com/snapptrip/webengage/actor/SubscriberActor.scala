@@ -53,6 +53,7 @@ class SubscriberActor(
       } else if (keyType == "track-event") {
         val event = JsonParser(value)
         if (context.child(s"webengage-actor-$userId").isDefined) {
+
           context.child(s"webengage-actor-$userId").foreach(_ ! SendEventInfo(event, 1))
         } else {
           context.actorOf(Props(new WebEngageActor), s"webengage-actor-$userId") ! SendEventInfo(event, 1)
