@@ -14,6 +14,7 @@ import com.snapptrip.notification.email.EmailService
 import com.snapptrip.notification.sms.SmsService
 import com.snapptrip.repos.BusinessRepoImpl
 import com.snapptrip.services.WebEngage
+import com.snapptrip.utils.formatters.EmailFormatter
 import com.snapptrip.utils.formatters.MobileNoFormatter._
 import com.typesafe.scalalogging.LazyLogging
 import spray.json.{JsNumber, JsObject, JsString, JsValue}
@@ -138,17 +139,27 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
           post {
             headerValue(extractToken(token)) { _ =>
               entity(as[WebEngageEvent]) { body1 =>
-                val body = body1.copy(user = body1.user.copy(mobile_no = format(body1.user.mobile_no)))
-                logger.info(s"""post events request by body $body""")
-                onSuccess(WebEngage.trackEventWithoutUserId(body)) {
-                  case (status, entity) if status =>
-                    logger.info(s"""post events response by result: $entity and status: $status""")
-                    val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
-                    complete(HttpResponse(status = StatusCodes.Created).withEntity(httpEntity))
-                  case (status, entity) if !status =>
-                    logger.info(s"""post events response by result: server error and status: $status""")
-                    val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
-                    complete(HttpResponse(status = StatusCodes.InternalServerError).withEntity(httpEntity))
+                val body = body1.copy(user = body1.user.copy(mobile_no = format(body1.user.mobile_no), email = format(body1.user.email)))
+                if (body.user.email.isEmpty && body.user.mobile_no.isEmpty) {
+                  logger.info(s"""post check user response by result: server error and status: ${400}""")
+                  val entity = JsObject(
+                    "status" -> JsString("ERROR"),
+                    "error" -> JsString("one of the fields of mobile or email need to be defined")
+                  ).toString
+                  val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
+                  complete(HttpResponse(status = StatusCodes.BadRequest).withEntity(httpEntity))
+                } else {
+                  logger.info(s"""post events request by body $body""")
+                  onSuccess(WebEngage.trackEventWithoutUserId(body)) {
+                    case (status, entity) if status =>
+                      logger.info(s"""post events response by result: $entity and status: $status""")
+                      val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
+                      complete(HttpResponse(status = StatusCodes.Created).withEntity(httpEntity))
+                    case (status, entity) if !status =>
+                      logger.info(s"""post events response by result: server error and status: $status""")
+                      val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
+                      complete(HttpResponse(status = StatusCodes.InternalServerError).withEntity(httpEntity))
+                  }
                 }
               }
             }
@@ -234,7 +245,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
           post {
             headerValue(extractToken(token)) { _ =>
               entity(as[WebEngageUserInfo]) { body1 =>
-                val body = body1.copy(mobile_no = format(body1.mobile_no))
+                val body = body1.copy(mobile_no = format(body1.mobile_no), email = EmailFormatter.format(body1.email))
                 logger.info(s"""post check user request by body $body""")
                 if (body.email.isEmpty && body.mobile_no.isEmpty) {
                   logger.info(s"""post check user response by result: server error and status: ${400}""")
@@ -272,7 +283,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
           headerValue(extractToken(token)) { _ =>
             post {
               entity(as[WebEngageUserInfo]) { body1 =>
-                val body = body1.copy(mobile_no = format(body1.mobile_no))
+                val body = body1.copy(mobile_no = format(body1.mobile_no), email = EmailFormatter.format(body1.email))
                 logger.info(s"""post register user request by body $body""")
                 if (body.email.isEmpty && body.mobile_no.isEmpty) {
                   logger.info(s"""post register user response by result: server error and status: ${400}""")
