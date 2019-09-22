@@ -4,7 +4,7 @@ import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 import akka.Done
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, Props}
 import akka.http.scaladsl.model.StatusCodes
 import akka.pattern.pipe
 import akka.routing.{DefaultResizer, RoundRobinPool}
@@ -57,13 +57,13 @@ class ClientActor(
       val ref = sender()
       trackEventWithoutUserId(event).pipeTo(ref)
 
-    case SendToKafka(key, value) =>
+    case SendToKafka(key, value, retryCount) =>
 
       Publisher.publish(key, value)
         .recover {
           case error: Throwable =>
             logger.info(s"""publish data to kafka with error: ${error.getMessage}""")
-            self ! SendToKafka(key, value)
+            retry(key, value, (retryCount + 1).second, retryCount + 1)
             Done
         }
 
@@ -101,7 +101,7 @@ class ClientActor(
         case Left(e) => Future.failed(e)
       }
     } yield {
-      self ! SendToKafka(Key(fUser._1.userId, "track-user"), List(fUser._1.toJson))
+      self ! SendToKafka(Key(fUser._1.userId, "track-user"), List(fUser._1.toJson), 1)
       fUser
     }).recover {
       case error: Throwable =>
@@ -140,13 +140,17 @@ class ClientActor(
         }
       }
     } yield {
-      self ! SendToKafka(Key(userId, "track-event"), List(newRequest))
+      self ! SendToKafka(Key(userId, "track-event"), List(newRequest), 1)
       (true, JsObject("status" -> JsString("success")))
     }).recover {
       case error: Throwable =>
         (false, JsObject("status" -> JsString("failed"), "error" -> JsString(error.getMessage)))
     }
 
+  }
+
+  def retry(key: Key, value: List[JsValue], time: FiniteDuration, retryCount: Int): Cancellable = {
+    context.system.scheduler.scheduleOnce(time, self, SendToKafka(key, value, retryCount))
   }
 
 }
@@ -165,7 +169,7 @@ object ClientActor {
 
   case class TrackEvent(event: WebEngageEvent)
 
-  case class SendToKafka(key: Key, value: List[JsValue])
+  case class SendToKafka(key: Key, value: List[JsValue], retryCount: Int)
 
   def converter(webEngageUserInfo: WebEngageUserInfo): User = {
     User(
@@ -211,6 +215,5 @@ object ClientActor {
       //      provider = user.provider
     )
   }
-
 
 }

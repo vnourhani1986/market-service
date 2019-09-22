@@ -6,6 +6,7 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives.{entity, _}
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.RouteDirectives.reject
+import akka.pattern.ask
 import akka.util.Timeout
 import com.snapptrip.DI._
 import com.snapptrip.api.Messages._
@@ -13,14 +14,13 @@ import com.snapptrip.formats.Formats._
 import com.snapptrip.notification.email.EmailService
 import com.snapptrip.notification.sms.SmsService
 import com.snapptrip.repos.BusinessRepoImpl
+import com.snapptrip.utils.formatters.EmailFormatter
 import com.snapptrip.utils.formatters.MobileNoFormatter._
+import com.snapptrip.webengage.actor.ClientActor
+import com.snapptrip.webengage.actor.ClientActor.{CheckUser, TrackEvent}
+import com.snapptrip.webengage.api.WebEngageApi
 import com.typesafe.scalalogging.LazyLogging
 import spray.json.{JsNumber, JsObject, JsString, JsValue}
-import akka.pattern.ask
-
-import com.snapptrip.webengage.actor.ClientActor.{CheckUser, TrackEvent}
-import com.snapptrip.webengage.actor.ClientActor
-import com.snapptrip.webengage.api.WebEngageApi
 
 import scala.concurrent.ExecutionContextExecutor
 
@@ -34,25 +34,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
 
   def routs: Route =
 
-    HealthCheckHandler.route ~ AuthHandler.routes ~ webEngageApi(token) // ~
-  //      AuthHandler.authenticated { (userInfo, channel) =>
-  //        userValidator(userInfo => userInfo.role == UserRole.ADMIN, userInfo) { userInfo =>
-  //          users(userInfo)
-  //        } //~
-  //        //          userValidator(userInfo => userInfo.role == UserRole.SUPER_SUPPORT, userInfo) { userInfo =>
-  //        //
-  //        //          } ~
-  //        //          userValidator(userInfo => userInfo.role == UserRole.SUPPORT, userInfo) { userInfo =>
-  //        //
-  //        //          } ~
-  //        //          userValidator(userInfo => userInfo.role == UserRole.FINANCE, userInfo) { userInfo =>
-  //        //
-  //        //          } ~
-  //        //          userValidator(userInfo => userInfo.role == UserRole.BUSINESS, userInfo) { userInfo =>
-  //        //
-  //        //          }
-  //
-  //      }
+    HealthCheckHandler.route ~ AuthHandler.routes ~ webEngageApi(token)
 
   def userValidator[T](validator: UserInfo => Boolean, userInfo: UserInfo)(route: UserInfo => Route): Route = {
     if (validator(userInfo)) {
@@ -76,42 +58,6 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
           }
         }
       }
-      //      ~
-      //        get {
-      //          logger.info(
-      //            s"""get users request""")
-      //          onSuccess(UsersRepoImpl.get) {
-      //            users =>
-      //              logger.info(s"""get users response users size : ${users.size} by user : $userInfo""")
-      //              complete(users)
-      //          }
-      //        } ~
-      //        path("add-user") {
-      //          post {
-      //            entity(as[WebEngageUser]) { user =>
-      //              logger.info(
-      //                s"""add new user request by filter content: $user""")
-      //              onSuccess(UsersRepoImpl.save(user)) {
-      //                id =>
-      //                  logger.info(s"""add new user response by id : $id by user : $userInfo""")
-      //                  complete(id.toString)
-      //              }
-      //            }
-      //          }
-      //        } ~
-      //        path("edit-user") {
-      //          put {
-      //            entity(as[WebEngageUser]) { user =>
-      //              logger.info(
-      //                s"""edit new user request by filter content: $user""")
-      //              onSuccess(UsersRepoImpl.update(user)) {
-      //                saveResult =>
-      //                  logger.info(s"""edit new user response by result : $saveResult by user : $userInfo""")
-      //                  complete(saveResult.toString)
-      //              }
-      //            }
-      //          }
-      //        }
     }
   }
 
@@ -142,17 +88,27 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
           post {
             headerValue(extractToken(token)) { _ =>
               entity(as[WebEngageEvent]) { body1 =>
-                val body = body1.copy(user = body1.user.copy(mobile_no = format(body1.user.mobile_no)))
-                logger.info(s"""post events request by body $body""")
-                onSuccess(ClientActor.clientActor.ask(TrackEvent(body)).mapTo[(Boolean, JsObject)]) {
-                  case (status, entity) if status =>
-                    logger.info(s"""post events response by result: $entity and status: $status""")
-                    val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
-                    complete(HttpResponse(status = StatusCodes.Created).withEntity(httpEntity))
-                  case (status, entity) if !status =>
-                    logger.info(s"""post events response by result: server error and status: $status""")
-                    val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
-                    complete(HttpResponse(status = StatusCodes.InternalServerError).withEntity(httpEntity))
+                val body = body1.copy(user = body1.user.copy(mobile_no = format(body1.user.mobile_no), email = format(body1.user.email)))
+                if (body.user.email.isEmpty && body.user.mobile_no.isEmpty) {
+                  logger.info(s"""post check user response by result: server error and status: ${StatusCodes.BadRequest.intValue}""")
+                  val entity = JsObject(
+                    "status" -> JsString("ERROR"),
+                    "error" -> JsString("one of the fields of mobile or email need to be defined")
+                  ).toString
+                  val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
+                  complete(HttpResponse(status = StatusCodes.BadRequest).withEntity(httpEntity))
+                } else {
+                  logger.info(s"""post events request by body $body""")
+                  onSuccess(ClientActor.clientActor.ask(TrackEvent(body)).mapTo[(Boolean, JsObject)]) {
+                    case (status, entity) if status =>
+                      logger.info(s"""post events response by result: $entity and status: $status""")
+                      val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
+                      complete(HttpResponse(status = StatusCodes.Created).withEntity(httpEntity))
+                    case (status, entity) if !status =>
+                      logger.info(s"""post events response by result: server error and status: $status""")
+                      val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
+                      complete(HttpResponse(status = StatusCodes.InternalServerError).withEntity(httpEntity))
+                  }
                 }
               }
             }
@@ -160,7 +116,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
         } ~
         path("sms") {
           post {
-            headerValue(extractToken(token)) { ctx =>
+            headerValue(extractToken(token)) { _ =>
               entity(as[WebEngageSMSBody]) { body =>
                 logger.info(s"""post sms request by body $body""")
                 onSuccess(SmsService.sendSMS(List(body.smsData.toNumber), body.smsData.body)) {
@@ -238,10 +194,10 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
           post {
             headerValue(extractToken(token)) { _ =>
               entity(as[WebEngageUserInfo]) { body1 =>
-                val body = body1.copy(mobile_no = format(body1.mobile_no))
+                val body = body1.copy(mobile_no = format(body1.mobile_no), email = EmailFormatter.format(body1.email))
                 logger.info(s"""post check user request by body $body""")
                 if (body.email.isEmpty && body.mobile_no.isEmpty) {
-                  logger.info(s"""post check user response by result: server error and status: ${400}""")
+                  logger.info(s"""post check user response by result: server error and status: ${StatusCodes.BadRequest.intValue}""")
                   val entity = JsObject(
                     "status" -> JsString("ERROR"),
                     "error" -> JsString("one of the fields of mobile or email need to be defined")
@@ -250,7 +206,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
                   complete(HttpResponse(status = StatusCodes.BadRequest).withEntity(httpEntity))
                 } else {
                   onSuccess(ClientActor.clientActor.ask(CheckUser(body)).mapTo[(WebEngageUserInfoWithUserId, Int)]) {
-                    case (user, status) if status == 200 || status == 201 =>
+                    case (user, status) if status == StatusCodes.OK.intValue || status == StatusCodes.Created.intValue =>
                       logger.info(s"""post check user response by status: $status""")
                       val entity = JsObject(
                         "status" -> JsString("SUCCESS"),
@@ -276,10 +232,10 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
           headerValue(extractToken(token)) { _ =>
             post {
               entity(as[WebEngageUserInfo]) { body1 =>
-                val body = body1.copy(mobile_no = format(body1.mobile_no))
+                val body = body1.copy(mobile_no = format(body1.mobile_no), email = EmailFormatter.format(body1.email))
                 logger.info(s"""post register user request by body $body""")
                 if (body.email.isEmpty && body.mobile_no.isEmpty) {
-                  logger.info(s"""post register user response by result: server error and status: ${400}""")
+                  logger.info(s"""post register user response by result: server error and status: ${StatusCodes.BadRequest.intValue}""")
                   val entity = JsObject(
                     "status" -> JsString("ERROR"),
                     "user_id" -> JsString("-1")
@@ -288,7 +244,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
                   complete(HttpResponse(status = StatusCodes.BadRequest).withEntity(httpEntity))
                 } else {
                   onSuccess(ClientActor.clientActor.ask(CheckUser(body)).mapTo[(WebEngageUserInfoWithUserId, Int)]) {
-                    case (_, status) if status == 200 || status == 201 =>
+                    case (_, status) if status == StatusCodes.OK.intValue || status == StatusCodes.Created.intValue =>
                       logger.info(s"""post register user response by status: $status""")
                       val entity = JsObject(
                         "status" -> JsString("SUCCESS")

@@ -9,7 +9,6 @@ import com.snapptrip.api.Messages._
 import com.snapptrip.kafka.Core.Key
 import com.snapptrip.models._
 import com.snapptrip.utils.{HttpError, MetaData}
-import com.sun.xml.internal.bind.v2.model.core.ID
 import spray.json.{RootJsonFormat, _}
 
 object Formats extends FormatsComponent
@@ -24,7 +23,7 @@ trait FormatsComponent extends JsonProtocol {
   implicit val newUserFormater = jsonFormat7(NewUser)
   implicit val editUserFormater = jsonFormat7(EditUser)
   implicit val userFormater = jsonFormat15(User)
-  implicit val userDBFormatFormater = jsonFormat15(UserDBFormat)
+  implicit val userDBFromatFormater = jsonFormat15(UserDBFormat)
   implicit val userLoginInfoFormat = jsonFormat2(UserLoginInfo)
   implicit val userLoginRequestFormat = jsonFormat3(UserLoginRequest)
   implicit val healthCheckResponseFormatter = jsonFormat4(HealthCheckResponse)
