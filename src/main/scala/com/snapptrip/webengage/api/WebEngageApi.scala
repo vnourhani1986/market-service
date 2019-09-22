@@ -16,7 +16,7 @@ import scala.concurrent.Future
 object WebEngageApi extends LazyLogging {
 
   def trackUser(request: JsValue): Future[(StatusCode, ResponseEntity)] = {
-    logger.info(s"""request track users to web engage with content:$request""")
+
     (for {
       body <- Marshal(request).to[RequestEntity]
       request = HttpRequest(HttpMethods.POST, WebEngageConfig.usersUrl)
@@ -25,17 +25,16 @@ object WebEngageApi extends LazyLogging {
       connectionFlow = Http().outgoingConnectionHttps(WebEngageConfig.host, settings = WebEngageConfig.clientConnectionSettings)
       (status, entity) <- Source.single(request).via(connectionFlow).runWith(Sink.head).map(x => (x.status, x.entity))
     } yield {
-      logger.info(s"""response track users to web engage with result:$entity with status: $status""")
       (status, entity)
     }).recover {
       case error: Throwable =>
-        logger.info(s"""response track users to web engage with result:${error.getMessage} with status: ${StatusCodes.InternalServerError}""")
+        logger.info(s"""response track user: $request to web engage with result:${error.getMessage} with status: ${StatusCodes.InternalServerError}""")
         (StatusCodes.InternalServerError, null)
     }
   }
 
   def trackEventWithUserId(request: JsValue): Future[(StatusCode, ResponseEntity)] = {
-    logger.info(s"""request track events to web engage with content:$request""")
+
     (for {
       body <- Marshal(request).to[RequestEntity]
       request = HttpRequest(HttpMethods.POST, WebEngageConfig.eventsUrl)
@@ -44,11 +43,10 @@ object WebEngageApi extends LazyLogging {
       connectionFlow = Http().outgoingConnectionHttps(WebEngageConfig.host, settings = WebEngageConfig.clientConnectionSettings)
       (status, entity) <- Source.single(request).via(connectionFlow).runWith(Sink.head).map(x => (x.status, x.entity))
     } yield {
-      logger.info(s"""response track events to web engage with result:$entity with status: $status""")
       (status, entity)
     }).recover {
       case error: Throwable =>
-        logger.info(s"""response track events to web engage with result:${error.getMessage} with status: ${StatusCodes.InternalServerError}""")
+        logger.info(s"""response track event: $request to web engage with result:${error.getMessage} with status: ${StatusCodes.InternalServerError}""")
         (StatusCodes.InternalServerError, null)
     }
   }

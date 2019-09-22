@@ -44,15 +44,13 @@ class WebEngageActor(
   override def receive(): Receive = {
 
     case SendUserInfo(user, retryCount) =>
-      logger.info(s"""send user info actor to webengage retry for $retryCount""")
+
       if (sender != self) sender ? (StatusCodes.OK.intValue, JsObject("status" -> JsString("success")))
       WebEngageApi.trackUser(user.toJson)
         .map {
           case (status, _) if status == StatusCodes.Created =>
-            logger.info(s"""receive user info actor from webengage status $status""")
             self ! PoisonPill
           case (status, _) if status == StatusCodes.InternalServerError =>
-            logger.info(s"""receive user info from webengage status $status""")
             if (retryCount < retryMax) {
               val rt = retryCount + 1
               retry(user, (retryCount * retryStep).second, rt)
@@ -68,7 +66,7 @@ class WebEngageActor(
             }
 
           case _ =>
-            logger.info(s"""receive user info actor from webengage with invalid response""")
+
             if (retryCount < retryMax) {
               val rt = retryCount + 1
               retry(user, (retryCount * retryStep).second, rt)
@@ -85,15 +83,13 @@ class WebEngageActor(
         }
 
     case SendEventInfo(userId, event, retryCount) =>
-      logger.info(s"""send event info actor to webengage retry for $retryCount""")
+
       if (sender != self) sender ? (StatusCodes.OK.intValue, JsObject("status" -> JsString("success")))
       WebEngageApi.trackEventWithUserId(event)
         .map {
           case (status, _) if status == StatusCodes.Created =>
-            logger.info(s"""receive event info actor from webengage status $status""")
             self ! PoisonPill
           case (status, _) if status == StatusCodes.InternalServerError =>
-            logger.info(s"""receive event info actor from webengage status $status""")
             if (retryCount < retryMax) {
               val rt = retryCount + 1
               retry(userId, event, (retryCount * retryStep).second, rt)
@@ -109,7 +105,7 @@ class WebEngageActor(
             }
 
           case _ =>
-            logger.info(s"""receive event info actor from webengage with invalid response""")
+
             if (retryCount < retryMax) {
               val rt = retryCount + 1
               retry(userId, event, (retryCount * retryStep).second, rt)
@@ -127,7 +123,7 @@ class WebEngageActor(
 
     case _ =>
       logger.info(s"""other messages""")
-      sender ? JsObject("status" -> JsString("success"))
+      sender ? JsObject("status" -> JsString("success"), "message" -> JsString("other messages"))
       self ! PoisonPill
 
   }

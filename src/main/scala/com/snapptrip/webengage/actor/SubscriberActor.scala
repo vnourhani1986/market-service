@@ -37,7 +37,6 @@ class SubscriberActor(
 
     case Start() =>
       logger.info(s"""start subscriber actor""")
-    //      retry(Start(), (1 * retryStep).second)
 
     case NewRequest(key, value) =>
 
