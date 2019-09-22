@@ -3,7 +3,9 @@ package com.snapptrip.webengage.actor
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
+import akka.Done
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.http.scaladsl.model.StatusCodes
 import akka.pattern.pipe
 import akka.routing.{DefaultResizer, RoundRobinPool}
 import akka.util.Timeout
@@ -55,6 +57,16 @@ class ClientActor(
       val ref = sender()
       trackEventWithoutUserId(event).pipeTo(ref)
 
+    case SendToKafka(key, value) =>
+
+      Publisher.publish(key, value)
+        .recover {
+          case error: Throwable =>
+            logger.info(s"""publish data to kafka with error: ${error.getMessage}""")
+            self ! SendToKafka(key, value)
+            Done
+        }
+
     case _ =>
       logger.info(s"""welcome to client actor""")
 
@@ -71,7 +83,7 @@ class ClientActor(
             val birthDate = Try {
               webEngageUser.birthDate.map(_.atStartOfDay().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss" + WebEngageConfig.timeOffset)))
             }.toOption.flatten
-            Right((converter(webEngageUser, birthDate), 200))
+            Right((converter(webEngageUser, birthDate), StatusCodes.OK.intValue))
           case false =>
             Left(new Exception("can not update user data in database"))
         }
@@ -81,18 +93,19 @@ class ClientActor(
           val birthDate = Try {
             user.birthDate.map(_.atStartOfDay().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss" + WebEngageConfig.timeOffset)))
           }.toOption.flatten
-          Right((converter(webEngageUser, birthDate), 201))
+          Right((converter(webEngageUser, birthDate), StatusCodes.Created.intValue))
         }
       }
-      _ <- user match {
-        case Right(u) => Publisher.publish(Key(u._1.userId, "track-user"), List(u._1.toJson))
+      fUser <- user match {
+        case Right(u) => Future.successful(u)
         case Left(e) => Future.failed(e)
       }
     } yield {
-      user.right.get
+      self ! SendToKafka(Key(fUser._1.userId, "track-user"), List(fUser._1.toJson))
+      fUser
     }).recover {
       case error: Throwable =>
-        (WebEngageUserInfoWithUserId(userId = error.getMessage), 500)
+        (WebEngageUserInfoWithUserId(userId = error.getMessage), StatusCodes.InternalServerError.intValue)
     }
 
   }
@@ -117,7 +130,6 @@ class ClientActor(
         Future.successful((userIdOpt.get, jContent))
       } else {
         val provider = event.asJsObject.fields.filterKeys(_ == "eventData").headOption.flatMap(_._2.asJsObject.fields.filterKeys(_ == "provider").headOption).map(_._2.compactPrint.replace(s""""""", ""))
-        logger.info("provider", provider)
         userCheck(WebEngageUserInfo(mobile_no = user.mobile_no, email = user.email, provider = provider)).map { response =>
           val (body, _) = response
           val lContent = JsObject("userId" -> JsString(body.userId)).fields.toList :::
@@ -127,13 +139,12 @@ class ClientActor(
           (userIdOpt.get, jContent)
         }
       }
-      _ <- Publisher.publish(Key(userId, "track-event"), List(newRequest))
     } yield {
+      self ! SendToKafka(Key(userId, "track-event"), List(newRequest))
       (true, JsObject("status" -> JsString("success")))
     }).recover {
       case error: Throwable =>
-        println(error.getMessage)
-        (false, JsObject("status" -> JsString("failed")))
+        (false, JsObject("status" -> JsString("failed"), "error" -> JsString(error.getMessage)))
     }
 
   }
@@ -142,7 +153,7 @@ class ClientActor(
 
 object ClientActor {
 
-  private implicit val timeout: Timeout = Timeout(1.minute)
+  private implicit val timeout: Timeout = Timeout(3.minute)
   val resizer = DefaultResizer(lowerBound = 2, upperBound = 25)
   val clientActor: ActorRef = system.actorOf(RoundRobinPool(10, Some(resizer)).props(Props(new ClientActor)), s"client-Actor-${Random.nextInt}")
 
@@ -153,6 +164,8 @@ object ClientActor {
   case class CheckUser(userInfo: WebEngageUserInfo)
 
   case class TrackEvent(event: WebEngageEvent)
+
+  case class SendToKafka(key: Key, value: List[JsValue])
 
   def converter(webEngageUserInfo: WebEngageUserInfo): User = {
     User(
@@ -171,6 +184,7 @@ object ClientActor {
 
   def converter(webEngageUserInfo: WebEngageUserInfo, oldUser: Option[User]): User = {
     User(
+      id = oldUser.flatMap(_.id),
       userName = webEngageUserInfo.user_name.orElse(oldUser.get.userName),
       userId = oldUser.get.userId,
       name = webEngageUserInfo.name.orElse(oldUser.get.name),

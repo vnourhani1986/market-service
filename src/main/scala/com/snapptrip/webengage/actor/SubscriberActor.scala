@@ -53,10 +53,9 @@ class SubscriberActor(
       } else if (keyType == "track-event") {
         val event = JsonParser(value)
         if (context.child(s"webengage-actor-$userId").isDefined) {
-
-          context.child(s"webengage-actor-$userId").foreach(_ ! SendEventInfo(event, 1))
+          context.child(s"webengage-actor-$userId").foreach(_ ! SendEventInfo(userId, event, 1))
         } else {
-          context.actorOf(Props(new WebEngageActor), s"webengage-actor-$userId") ! SendEventInfo(event, 1)
+          context.actorOf(Props(new WebEngageActor), s"webengage-actor-$userId") ! SendEventInfo(userId, event, 1)
         }
       }
 
@@ -73,7 +72,7 @@ class SubscriberActor(
 
 object SubscriberActor {
 
-  private implicit val timeout: Timeout = Timeout(1.minute)
+  private implicit val timeout: Timeout = Timeout(3.minute)
   val subscriberActor: ActorRef = system.actorOf(Props(new SubscriberActor), s"subscriber-Actor-${Random.nextInt}")
 
   case class Start()
