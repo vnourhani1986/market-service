@@ -19,6 +19,7 @@ import com.snapptrip.repos.WebEngageUserRepoImpl
 import com.snapptrip.utils.WebEngageConfig
 import com.snapptrip.utils.formatters.EmailFormatter
 import com.snapptrip.webengage.actor.ClientActor.{CheckUser, RegisterUser, Start, TrackEvent, _}
+import com.snapptrip.webengage.actor.SubscriberActor.NewRequest
 import com.typesafe.scalalogging.LazyLogging
 import spray.json._
 
@@ -57,13 +58,13 @@ class ClientActor(
       val ref = sender()
       trackEventWithoutUserId(event).pipeTo(ref)
 
-    case SendToKafka(key, value, retryCount) =>
+    case SendToKafka(key, value, _) =>
 
       Publisher.publish(key, value)
         .recover {
           case error: Throwable =>
             logger.info(s"""publish data to kafka with error: ${error.getMessage}""")
-            retry(key, value, (retryCount + 1).second, retryCount + 1)
+            SubscriberActor.subscriberActor ! NewRequest(key.toJson.compactPrint, value.head.compactPrint)
             Done
         }
 
@@ -158,7 +159,7 @@ class ClientActor(
 object ClientActor {
 
   private implicit val timeout: Timeout = Timeout(3.minute)
-  val resizer = DefaultResizer(lowerBound = 2, upperBound = 25)
+  val resizer = DefaultResizer(lowerBound = 2, upperBound = 50)
   val clientActor: ActorRef = system.actorOf(RoundRobinPool(10, Some(resizer)).props(Props(new ClientActor)), s"client-Actor-${Random.nextInt}")
 
   case class Start()

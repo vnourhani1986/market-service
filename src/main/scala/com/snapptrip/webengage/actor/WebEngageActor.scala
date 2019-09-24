@@ -45,7 +45,6 @@ class WebEngageActor(
 
     case SendUserInfo(user, retryCount) =>
 
-      if (sender != self) sender ? (StatusCodes.OK.intValue, JsObject("status" -> JsString("success")))
       WebEngageApi.trackUser(user.toJson)
         .map {
           case (status, _) if status == StatusCodes.Created =>
@@ -84,7 +83,6 @@ class WebEngageActor(
 
     case SendEventInfo(userId, event, retryCount) =>
 
-      if (sender != self) sender ? (StatusCodes.OK.intValue, JsObject("status" -> JsString("success")))
       WebEngageApi.trackEventWithUserId(event)
         .map {
           case (status, _) if status == StatusCodes.Created =>

@@ -58,8 +58,8 @@ class SubscriberActor(
         }
       }
 
-    case _ =>
-      logger.info(s"""start subscriber actor""")
+    case x: Any =>
+      logger.info(s"""welcome to subscriber actor $x""")
 
   }
 
