@@ -137,7 +137,7 @@ class ClientActor(
             event.asJsObject.fields.filterKeys(_ == "eventTime").toList.flatMap(x => JsObject(x._1 -> JsString(x._2.compactPrint.replace(s""""""", "").concat(WebEngageConfig.timeOffset))).fields.toList) :::
             event.asJsObject.fields.filterKeys(x => x != "email" && x != "mobile_no" && x != "eventTime").toList
           val jContent = JsObject(lContent.toMap)
-          (userIdOpt.get, jContent)
+          (body.userId, jContent)
         }
       }
     } yield {
