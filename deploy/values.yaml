@@ -23,7 +23,9 @@ ingress:
       hosts:
         - www.pintapin.com
   annotations:
-    nginx.ingress.kubernetes.io/enable-cors: "true"
-    nginx.ingress.kubernetes.io/cors-allow-methods: "PUT, GET, POST, OPTIONS, DELETE, HEAD"
-    nginx.ingress.kubernetes.io/cors-allow-origin: "https://snapptrip.com, https://pwa.snapptrip.com, http://localhost:3000, http://localhost"
-    nginx.ingress.kubernetes.io/cors-allow-credentials: "false"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: 'false'
+    nginx.ingress.kubernetes.io/cors-allow-headers: >-
+      DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization,channel,search-session,token
+    nginx.ingress.kubernetes.io/cors-allow-methods: 'PUT, GET, POST, OPTIONS, DELETE'
+    nginx.ingress.kubernetes.io/cors-allow-origin: '*'
+    nginx.ingress.kubernetes.io/enable-cors: 'true'
