@@ -286,8 +286,7 @@ trait CORSHandler {
   private val corsResponseHeaders = List(
     `Access-Control-Allow-Origin`.*,
     `Access-Control-Allow-Credentials`(true),
-    `Access-Control-Allow-Headers`("Authorization",
-      "Content-Type", "X-Requested-With"),
+    `Access-Control-Allow-Headers`("*"),
     `Access-Control-Max-Age`(1.day.toMillis) //Tell browser to cache OPTIONS requests
   )
 
