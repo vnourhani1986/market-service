@@ -25,5 +25,5 @@ ingress:
   annotations:
     nginx.ingress.kubernetes.io/enable-cors: "true"
     nginx.ingress.kubernetes.io/cors-allow-methods: "PUT, GET, POST, OPTIONS, DELETE, HEAD"
-    nginx.ingress.kubernetes.io/cors-allow-origin: "https://pwa.snapptrip.com, http://localhost:3000, http://localhost"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://snapptrip.com, https://pwa.snapptrip.com, http://localhost:3000, http://localhost"
     nginx.ingress.kubernetes.io/cors-allow-credentials: "false"
