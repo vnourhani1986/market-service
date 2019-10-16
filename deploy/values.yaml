@@ -1,5 +1,5 @@
 replicas: 1
-namespace: b2c 
+namespace: b2c
 context: local
 imagePullSecrets: regsecret
 image: git.pinsvc.net:4567/b2c/market-service/beta
@@ -22,6 +22,8 @@ ingress:
     - secretName: www-pintapin-com-ssl
       hosts:
         - www.pintapin.com
-    - secretName: snapptrip-com-ssl
-      hosts:
-        - www.snapptrip.com
+  annotations:
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "PUT, GET, POST, OPTIONS, DELETE, HEAD"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://pwa.snapptrip.com, http://localhost:3000, http://localhost"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "false"
