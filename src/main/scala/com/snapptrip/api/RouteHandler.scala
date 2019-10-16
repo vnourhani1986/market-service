@@ -66,7 +66,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
 
   private val cors = new CORSHandler {}
 
-  def ping: Route = path("api/v1/webengage/user/check") {
+  def ping: Route = path("api" / "v1" / "webengage" / "user" / "check") {
     //The OPTIONS endpoint - doesn't need to do anything except send an OK
     options {
       cors.corsHandler(complete(StatusCodes.OK))
