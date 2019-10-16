@@ -37,7 +37,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
 
   def routs: Route =
 
-    HealthCheckHandler.route ~ AuthHandler.routes ~ webEngageApi(token)
+    HealthCheckHandler.route ~ ping ~ AuthHandler.routes ~ webEngageApi(token)
 
   def userValidator[T](validator: UserInfo => Boolean, userInfo: UserInfo)(route: UserInfo => Route): Route = {
     if (validator(userInfo)) {
@@ -66,6 +66,12 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
 
   private val cors = new CORSHandler {}
 
+  val ping: Route = path("api/v1/webengage/user/check") {
+    //The OPTIONS endpoint - doesn't need to do anything except send an OK
+    options {
+      cors.corsHandler(complete(StatusCodes.OK))
+    }
+  }
 
   def webEngageApi(token: String): Route = {
 
