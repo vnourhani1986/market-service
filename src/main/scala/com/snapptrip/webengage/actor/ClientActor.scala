@@ -106,6 +106,7 @@ class ClientActor(
       fUser
     }).recover {
       case error: Throwable =>
+        logger.info(s"""client actor check user with error : ${error.getMessage}""")
         (WebEngageUserInfoWithUserId(userId = error.getMessage), StatusCodes.InternalServerError.intValue)
     }
 
@@ -145,6 +146,7 @@ class ClientActor(
       (true, JsObject("status" -> JsString("success")))
     }).recover {
       case error: Throwable =>
+        logger.info(s"""client actor track event with error : ${error.getMessage}""")
         (false, JsObject("status" -> JsString("failed"), "error" -> JsString(error.getMessage)))
     }
 
