@@ -49,10 +49,10 @@ object MobileNoFormatter {
   def format(mobileNo: Option[String]): Option[String] = {
     mobileNo.flatMap { m =>
       val mobile = noPersianToEnglish(m.trim)
-      if (mobile.length == 0 || mobile.length > 10 || !isNumber(mobile)) {
+      if (mobile.length == 0) {
         None
       } else {
-        formats.map(x => (noPersianToEnglish(mobile).matches(x._1), x)).find(_._1).map(_._2._2).map(m.substring) match {
+        formats.map(x => (mobile.matches(x._1), x)).find(_._1).map(_._2._2).map(m.substring) match {
           case Some(em) => Some(em)
           case None => Some(mobile)
         }
