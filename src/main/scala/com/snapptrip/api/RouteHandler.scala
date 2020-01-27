@@ -16,6 +16,7 @@ import com.snapptrip.formats.Formats._
 import com.snapptrip.notification.email.EmailService
 import com.snapptrip.notification.sms.SmsService
 import com.snapptrip.repos.BusinessRepoImpl
+import com.snapptrip.utils.EmailAddress
 import com.snapptrip.utils.formatters.EmailFormatter
 import com.snapptrip.utils.formatters.MobileNoFormatter._
 import com.snapptrip.webengage.actor.ClientActor
@@ -99,11 +100,32 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
             headerValue(extractToken(token)) { _ =>
               entity(as[WebEngageEvent]) { body1 =>
                 val body = body1.copy(user = body1.user.copy(mobile_no = format(body1.user.mobile_no), email = format(body1.user.email)))
-                if (body.user.email.isEmpty && body.user.mobile_no.isEmpty) {
+
+                val mobile = body1.user.mobile_no.getOrElse("")
+                val email = body1.user.email.getOrElse("")
+                val isValidMobile = isNumber(mobile)
+                val isValidEmail = EmailAddress.isValid(email)
+
+                val msg = if (email.isEmpty && mobile.isEmpty) {
+                  "one of the fields of mobile or email need to be defined"
+                }
+                else if (email.nonEmpty && !isValidEmail && mobile.nonEmpty && !isValidMobile) {
+                  "invalid Email and mobile number"
+                }
+                else if (email.nonEmpty && !isValidEmail) {
+                  "invalid Email"
+                }
+                else if (mobile.nonEmpty && !isValidMobile) {
+                  "invalid mobile number"
+                }
+                else ""
+
+
+                if (msg.nonEmpty) {
                   logger.info(s"""post check user response by result: server error and status: ${StatusCodes.BadRequest.intValue}""")
                   val entity = JsObject(
                     "status" -> JsString("ERROR"),
-                    "error" -> JsString("one of the fields of mobile or email need to be defined")
+                    "error" -> JsString(msg)
                   ).toString
                   val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
                   complete(HttpResponse(status = StatusCodes.BadRequest).withEntity(httpEntity))
@@ -204,11 +226,31 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
                 headerValue(extractToken(token)) { _ =>
                   entity(as[WebEngageUserInfo]) { body1 =>
                     val body = body1.copy(mobile_no = format(body1.mobile_no), email = EmailFormatter.format(body1.email))
-                    if (body.email.isEmpty && body.mobile_no.isEmpty) {
+
+                    val mobile = body1.mobile_no.getOrElse("")
+                    val email = body1.email.getOrElse("")
+                    val isValidMobile = isNumber(mobile)
+                    val isValidEmail = EmailAddress.isValid(email)
+
+                    val msg = if (email.isEmpty && mobile.isEmpty) {
+                      "one of the fields of mobile or email need to be defined"
+                    }
+                    else if (email.nonEmpty && !isValidEmail && mobile.nonEmpty && !isValidMobile) {
+                      "invalid Email and mobile number"
+                    }
+                    else if (email.nonEmpty && !isValidEmail) {
+                      "invalid Email"
+                    }
+                    else if (mobile.nonEmpty && !isValidMobile) {
+                      "invalid mobile number"
+                    }
+                    else ""
+
+                    if (msg.nonEmpty) {
                       logger.info(s"""post check user : $body response by result: server error and status: ${StatusCodes.BadRequest.intValue}""")
                       val entity = JsObject(
                         "status" -> JsString("ERROR"),
-                        "error" -> JsString("one of the fields of mobile or email need to be defined")
+                        "error" -> JsString(msg)
                       ).toString
                       val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
                       complete(HttpResponse(status = StatusCodes.BadRequest).withEntity(httpEntity))
@@ -217,7 +259,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
                         case (user, status) if status == StatusCodes.OK.intValue || status == StatusCodes.Created.intValue =>
                           val entity = JsObject(
                             "status" -> JsString("SUCCESS"),
-                            "user_id" -> JsString(user.userId),
+                            "user_id" -> JsString(user.userId)
                           ).toString
                           val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
                           complete(HttpResponse(status = status).withEntity(httpEntity))
@@ -240,11 +282,34 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
           headerValue(extractToken(token)) { _ =>
             post {
               entity(as[WebEngageUserInfo]) { body1 =>
+
                 val body = body1.copy(mobile_no = format(body1.mobile_no), email = EmailFormatter.format(body1.email))
-                if (body.email.isEmpty && body.mobile_no.isEmpty) {
+
+                val mobile = body1.mobile_no.getOrElse("")
+                val email = body1.email.getOrElse("")
+                val isValidMobile = isNumber(mobile)
+                val isValidEmail = EmailAddress.isValid(email)
+
+                val msg = if (email.isEmpty && mobile.isEmpty) {
+                  "one of the fields of mobile or email need to be defined"
+                }
+                else if (email.nonEmpty && !isValidEmail && mobile.nonEmpty && !isValidMobile) {
+                  "invalid Email and mobile number"
+                }
+                else if (email.nonEmpty && !isValidEmail) {
+                  "invalid Email"
+                }
+                else if (mobile.nonEmpty && !isValidMobile) {
+                  "invalid mobile number"
+                }
+                else ""
+
+
+                if (msg.nonEmpty) {
                   logger.info(s"""post register user : $body response by result: server error and status: ${StatusCodes.BadRequest.intValue}""")
                   val entity = JsObject(
                     "status" -> JsString("ERROR"),
+                    "error" -> JsString(msg),
                     "user_id" -> JsString("-1")
                   ).toString
                   val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
