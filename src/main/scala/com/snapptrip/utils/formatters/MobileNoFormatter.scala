@@ -4,20 +4,10 @@ import scala.util.Try
 
 object MobileNoFormatter {
 
-  def isShort(aString: String): Boolean = Try(aString.toLong).isSuccess
-
-  def isInt(aString: String): Boolean = Try(aString.toInt).isSuccess
-
   def isLong(aString: String): Boolean = Try(aString.toLong).isSuccess
 
-  def isDouble(aString: String): Boolean = Try(aString.toDouble).isSuccess
-
-  def isFloat(aString: String): Boolean = Try(aString.toFloat).isSuccess
-
-  def isNumber(x: String): Boolean = {
-    val result = noPersianToEnglish(x.trim)
-    List(isLong(result))
-      .foldLeft(false)(_ || _)
+  def isNumber(str: String): Boolean = {
+    isLong(str)
   }
 
   val formats = List(("""[0][9][0-9][0-9]{8,8}""", 1), ("""[0][0][9][8][9][0-9][0-9]{8,8}""", 4), ("""[+][9][8][9][0-9][0-9]{8,8}""", 3))

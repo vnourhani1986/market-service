@@ -232,6 +232,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
                     val isValidMobile = isNumber(mobile)
                     val isValidEmail = EmailAddress.isValid(email)
 
+                    println(s"mobile=$mobile,valid=$isValidMobile")
                     val msg = if (email.isEmpty && mobile.isEmpty) {
                       "one of the fields of mobile or email need to be defined"
                     }
