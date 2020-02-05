@@ -36,7 +36,7 @@ class ClientActor(
 
   val retryStep = 10
   val retryMax = 5
-  self ! Start()
+//  self ! Start()
 
   override def receive(): Receive = {
 
