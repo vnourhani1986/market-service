@@ -162,7 +162,7 @@ object ClientActor {
 
   private implicit val timeout: Timeout = Timeout(30.second)
   val resizer = DefaultResizer(lowerBound = 50, upperBound = 500)
-  val clientActor: ActorRef = system.actorOf(BalancingPool(100).props(Props(new ClientActor)), s"client-Actor-${Random.nextInt}")
+  val clientActor: ActorRef = system.actorOf(BalancingPool(10000).props(Props(new ClientActor)), s"client-Actor-${Random.nextInt}")
 
   case class Start()
 
