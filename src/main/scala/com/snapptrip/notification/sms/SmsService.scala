@@ -33,7 +33,7 @@ object SmsService extends LazyLogging {
       body <- Marshal(request).to[RequestEntity]
       request = HttpRequest(HttpMethods.POST, NotificationConfig.smsUrl)
         .withEntity(body.withContentType(ContentTypes.`application/json`))
-      connectionFlow = Http().outgoingConnection(NotificationConfig.host, settings = NotificationConfig.clientConnectionSettings)
+      connectionFlow = Http().outgoingConnectionHttps(NotificationConfig.host, settings = NotificationConfig.clientConnectionSettings)
       (status, entity) <- Source.single(request).via(connectionFlow).runWith(Sink.head).map(x => (x.status, x.entity))
     } yield {
       logger.info(s"""response sms notification with result:${entity.toString} with status: $status""")
