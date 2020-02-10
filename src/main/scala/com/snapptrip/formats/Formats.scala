@@ -42,6 +42,9 @@ trait FormatsComponent extends JsonProtocol {
   implicit val eventUserInfoFormat = jsonFormat2(EventUserInfo)
   implicit val webEngageEventFormat = jsonFormat2(WebEngageEvent)
   implicit val keyFormat = jsonFormat2(Key)
+  implicit val webEngageSubjectIdentitiesFormat = jsonFormat2(SubjectIdentities)
+  implicit val webEngageOpengdprRequeststFormat = jsonFormat3(OpengdprRequests)
+
 }
 
 

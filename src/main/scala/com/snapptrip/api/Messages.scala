@@ -88,5 +88,16 @@ object Messages {
 
   case class WebEngageEvent(user: EventUserInfo, event: JsValue)
 
+  case class SubjectIdentities(
+                                identity_type: String,
+                                identity_value: String
+                              )
+
+  case class OpengdprRequests(
+                               subject_request_id: String,
+                               subject_request_type: String,
+                               subject_identities: List[SubjectIdentities]
+                             )
+
 
 }
