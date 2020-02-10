@@ -17,6 +17,7 @@ object SmsService extends LazyLogging {
 
   def sendSMS(mobilesNo: List[String], content: String): Future[StatusCode] = {
 
+    println(content, "sms content")
     val smsDetails = JsObject(
       "to" -> json.JsArray(mobilesNo.map(JsString(_)).toVector),
       "content" -> JsString(content),
