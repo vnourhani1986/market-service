@@ -71,7 +71,7 @@ class SubscriberActor(
 
 object SubscriberActor {
 
-  private implicit val timeout: Timeout = Timeout(3.minute)
+  private implicit val timeout: Timeout = Timeout(30.second)
   val subscriberActor: ActorRef = system.actorOf(Props(new SubscriberActor), s"subscriber-Actor-${Random.nextInt}")
 
   case class Start()
