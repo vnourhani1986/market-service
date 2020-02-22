@@ -22,7 +22,7 @@ import scala.util.Random
 
 object WebEngageActor {
 
-  private implicit val timeout: Timeout = Timeout(3.minute)
+  private implicit val timeout: Timeout = Timeout(30.second)
   val webEngageActor: ActorRef = system.actorOf(Props(new WebEngageActor), s"webengage-actor-${Random.nextInt}")
 
   case class SendUserInfo(user: WebEngageUserInfoWithUserId, retryCount: Int) extends ControlMessage

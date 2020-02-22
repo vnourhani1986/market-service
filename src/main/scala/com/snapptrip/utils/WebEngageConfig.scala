@@ -15,6 +15,6 @@ object WebEngageConfig {
   val usersUrl: String = s"""$baseUrl$licenseCode$userUrl"""
   val eventsUrl: String = s"""$baseUrl$licenseCode$eventUrl"""
   val opengdprRequestsUrl: String = s"""$baseUrl$licenseCode$opengdprRequestUrl"""
-  val clientConnectionSettings: ClientConnectionSettings = ClientConnectionSettings(system).withConnectingTimeout(180.second)
+  val clientConnectionSettings: ClientConnectionSettings = ClientConnectionSettings(system).withConnectingTimeout(30.second)
   val timeOffset: String = config.getString("web-engage.time-offset")
 }
