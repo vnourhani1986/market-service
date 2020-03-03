@@ -7,7 +7,7 @@ import akka.Done
 import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, Props}
 import akka.http.scaladsl.model.StatusCodes
 import akka.pattern.pipe
-import akka.routing.{DefaultResizer, BalancingPool}
+import akka.routing.{BalancingPool, DefaultResizer}
 import akka.util.Timeout
 import com.snapptrip.DI._
 import com.snapptrip.api.Messages.{WebEngageEvent, WebEngageUserInfo, WebEngageUserInfoWithUserId}
@@ -36,7 +36,7 @@ class ClientActor(
 
   val retryStep = 10
   val retryMax = 5
-//  self ! Start()
+  //  self ! Start()
 
   override def receive(): Receive = {
 
@@ -122,24 +122,14 @@ class ClientActor(
       } else {
         Future.successful("")
       }
-      oldUser <- WebEngageUserRepoImpl.findByFilter(user.mobile_no, user.email)
-      userIdOpt = oldUser.map(_.userId)
-      (userId, newRequest) <- if (userIdOpt.isDefined) {
-        val lContent = JsObject("userId" -> JsString(userIdOpt.get)).fields.toList :::
+      provider = event.asJsObject.fields.filterKeys(_ == "eventData").headOption.flatMap(_._2.asJsObject.fields.filterKeys(_ == "provider").headOption).map(_._2.compactPrint.replace(s""""""", ""))
+      (userId, newRequest) <- userCheck(WebEngageUserInfo(mobile_no = user.mobile_no, email = user.email, provider = provider)).map { response =>
+        val (body, _) = response
+        val lContent = JsObject("userId" -> JsString(body.userId)).fields.toList :::
           event.asJsObject.fields.filterKeys(_ == "eventTime").toList.flatMap(x => JsObject(x._1 -> JsString(x._2.compactPrint.replace(s""""""", "").concat(WebEngageConfig.timeOffset))).fields.toList) :::
           event.asJsObject.fields.filterKeys(x => x != "email" && x != "mobile_no" && x != "eventTime").toList
         val jContent = JsObject(lContent.toMap)
-        Future.successful((userIdOpt.get, jContent))
-      } else {
-        val provider = event.asJsObject.fields.filterKeys(_ == "eventData").headOption.flatMap(_._2.asJsObject.fields.filterKeys(_ == "provider").headOption).map(_._2.compactPrint.replace(s""""""", ""))
-        userCheck(WebEngageUserInfo(mobile_no = user.mobile_no, email = user.email, provider = provider)).map { response =>
-          val (body, _) = response
-          val lContent = JsObject("userId" -> JsString(body.userId)).fields.toList :::
-            event.asJsObject.fields.filterKeys(_ == "eventTime").toList.flatMap(x => JsObject(x._1 -> JsString(x._2.compactPrint.replace(s""""""", "").concat(WebEngageConfig.timeOffset))).fields.toList) :::
-            event.asJsObject.fields.filterKeys(x => x != "email" && x != "mobile_no" && x != "eventTime").toList
-          val jContent = JsObject(lContent.toMap)
-          (body.userId, jContent)
-        }
+        (body.userId, jContent)
       }
     } yield {
       self ! SendToKafka(Key(userId, "track-event"), List(newRequest), 1)
