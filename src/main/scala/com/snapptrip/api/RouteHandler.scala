@@ -17,8 +17,8 @@ import com.snapptrip.notification.email.EmailService
 import com.snapptrip.notification.sms.SmsService
 import com.snapptrip.repos.BusinessRepoImpl
 import com.snapptrip.utils.EmailAddress
-import com.snapptrip.utils.formatters.EmailFormatter
 import com.snapptrip.utils.formatters.MobileNoFormatter._
+import com.snapptrip.utils.formatters.{EmailFormatter, MobileNoFormatter}
 import com.snapptrip.webengage.actor.ClientActor
 import com.snapptrip.webengage.actor.ClientActor.{CheckUser, TrackEvent}
 import com.snapptrip.webengage.api.WebEngageApi
@@ -99,8 +99,8 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
           post {
             headerValue(extractToken(token)) { _ =>
               entity(as[WebEngageEvent]) { body1 =>
-                val body = body1.copy(user = body1.user.copy(mobile_no = format(body1.user.mobile_no), email = format(body1.user.email)))
 
+                val body = body1.copy(user = body1.user.copy(mobile_no = MobileNoFormatter.format(body1.user.mobile_no), email = EmailFormatter.format(body1.user.email)))
                 val mobile = body1.user.mobile_no.getOrElse("")
                 val email = body1.user.email.getOrElse("")
                 val isValidMobile = isNumber(mobile)
@@ -225,7 +225,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
               cors.corsHandler {
                 headerValue(extractToken(token)) { _ =>
                   entity(as[WebEngageUserInfo]) { body1 =>
-                    val body = body1.copy(mobile_no = format(body1.mobile_no), email = EmailFormatter.format(body1.email))
+                    val body = body1.copy(mobile_no = MobileNoFormatter.format(body1.mobile_no), email = EmailFormatter.format(body1.email))
 
                     val mobile = body1.mobile_no.getOrElse("")
                     val email = body1.email.getOrElse("")
@@ -284,7 +284,10 @@ class RouteHandler(system: ActorSystem, timeout: Timeout) extends LazyLogging {
             post {
               entity(as[WebEngageUserInfo]) { body1 =>
 
-                val body = body1.copy(mobile_no = format(body1.mobile_no), email = EmailFormatter.format(body1.email))
+                val body = body1.copy(
+                    mobile_no = MobileNoFormatter.format(body1.mobile_no),
+                    email = EmailFormatter.format(body1.email)
+                  )
 
                 val mobile = body1.mobile_no.getOrElse("")
                 val email = body1.email.getOrElse("")
