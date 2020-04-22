@@ -14,7 +14,7 @@ import spray.json.JsonParser
 
 import scala.concurrent.Future
 
-trait WebEngageUserRepo {
+trait WebEngageUserRepo extends Repo[User, WebEngageUserInfo] {
 
   def findByUserName(userName: Option[String]): Future[Option[User]]
 
@@ -25,6 +25,8 @@ trait WebEngageUserRepo {
   def get: Future[Seq[User]]
 
   def findByFilter(filter: WebEngageUserInfo): Future[Option[User]]
+
+  def find(filter: WebEngageUserInfo): Future[Option[User]]
 
   def findByFilter(mobileNo: Option[String], email: Option[String]): Future[Option[User]]
 
@@ -76,7 +78,19 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
     val m = filter.mobile_no.map(x => s"""'$x'""").getOrElse(s"""null""")
     val query = sql"""SELECT * from ptp_fn_find_user(#$e, #$m);"""
       .as[Option[String]]
-    db.run(query).map(_.map (_.map( r => get(r) )).headOption.flatten)
+    db.run(query).map(_.map(_.map(r => get(r))).headOption.flatten)
+
+  }
+
+  override def find(filter: WebEngageUserInfo): Future[Option[User]] = {
+
+    val em = EmailFormatter.format(filter.email)
+
+    val e = em.map(x => s"""'$x'""").getOrElse(s"""null""")
+    val m = filter.mobile_no.map(x => s"""'$x'""").getOrElse(s"""null""")
+    val query = sql"""SELECT * from ptp_fn_find_user(#$e, #$m);"""
+      .as[Option[String]]
+    db.run(query).map(_.map(_.map(r => get(r))).headOption.flatten)
 
   }
 
@@ -88,7 +102,7 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
     val m = mobileNo.map(x => s"""'$x'""").getOrElse(s"""null""")
     val query = sql"""SELECT * from ptp_fn_find_user(#$e, #$m);"""
       .as[Option[String]]
-    db.run(query).map(_.map (_.map( r => get(r) )).headOption.flatten)
+    db.run(query).map(_.map(_.map(r => get(r))).headOption.flatten)
 
   }
 

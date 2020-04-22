@@ -7,7 +7,7 @@ import akka.Done
 import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, Props}
 import akka.http.scaladsl.model.StatusCodes
 import akka.pattern.pipe
-import akka.routing.{BalancingPool, DefaultResizer}
+import akka.routing.{BalancingPool, DefaultResizer, FromConfig}
 import akka.util.Timeout
 import com.snapptrip.DI._
 import com.snapptrip.api.Messages.{WebEngageEvent, WebEngageUserInfo, WebEngageUserInfoWithUserId}
@@ -151,8 +151,9 @@ class ClientActor(
 object ClientActor {
 
   private implicit val timeout: Timeout = Timeout(30.second)
-  val resizer = DefaultResizer(lowerBound = 50, upperBound = 500)
-  val clientActor: ActorRef = system.actorOf(BalancingPool(100).props(Props(new ClientActor)), s"client-Actor-${Random.nextInt}")
+
+  val props = Props(new ClientActor)
+  val clientActor: ActorRef = system.actorOf(FromConfig.props(props), s"client-router")
 
   case class Start()
 
