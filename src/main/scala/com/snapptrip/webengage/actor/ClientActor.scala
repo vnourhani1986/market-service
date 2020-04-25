@@ -13,7 +13,8 @@ import com.typesafe.scalalogging.LazyLogging
 import scala.concurrent.duration._
 
 class ClientActor(
-                   dbRouter: => ActorRef
+                   dbRouter: => ActorRef,
+                   kafkaActor: => ActorRef
                  )(
                    implicit timeout: Timeout
                  ) extends Actor with Converter with LazyLogging {
@@ -22,8 +23,8 @@ class ClientActor(
 
   import ClientActor._
 
-  lazy val userActorRef: ActorRef = context.actorOf(FromConfig.props(UserActor(dbRouter)), s"user-router")
-  lazy val eventActorRef: ActorRef = context.actorOf(FromConfig.props(EventActor(dbRouter)), s"event-router")
+  lazy val userActorRef: ActorRef = context.actorOf(FromConfig.props(UserActor(dbRouter, kafkaActor)), s"user-router")
+  lazy val eventActorRef: ActorRef = context.actorOf(FromConfig.props(EventActor(dbRouter, kafkaActor)), s"event-router")
 
   override def preStart(): Unit = {
     super.preStart()
@@ -61,8 +62,8 @@ object ClientActor {
 
   private implicit val timeout: Timeout = Timeout(30.second)
 
-  def apply(dbActor: => ActorRef): Props = {
-    Props(new ClientActor(dbActor))
+  def apply(dbActor: => ActorRef, kafkaActor: => ActorRef): Props = {
+    Props(new ClientActor(dbActor, kafkaActor))
   }
 
   case class RegisterUser(userInfo: WebEngageUserInfo) extends Message

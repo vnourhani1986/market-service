@@ -6,7 +6,7 @@ import java.util.UUID
 
 import com.snapptrip.api.HealthCheckResponse
 import com.snapptrip.api.Messages._
-import com.snapptrip.kafka.Core.Key
+import com.snapptrip.kafka.Setting.Key
 import com.snapptrip.models._
 import com.snapptrip.utils.{HttpError, MetaData}
 import spray.json.{RootJsonFormat, _}

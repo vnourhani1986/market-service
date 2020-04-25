@@ -4,6 +4,7 @@ import akka.actor.SupervisorStrategy.Resume
 import akka.actor.{Actor, ActorRef, ActorSystem, OneForOneStrategy, Props, SupervisorStrategy}
 import akka.routing.FromConfig
 import akka.util.Timeout
+import com.snapptrip.kafka.Publisher
 import com.snapptrip.repos.WebEngageUserRepoImpl
 import com.typesafe.scalalogging.LazyLogging
 
@@ -19,7 +20,7 @@ class MarketServiceActor(
 
   private lazy val dbActorRef: ActorRef = context.actorOf(FromConfig.props(DBActor(WebEngageUserRepoImpl))
     .withMailbox("mailbox.db-actor"), s"db-router")
-  lazy val clientActorRef: ActorRef = context.actorOf(FromConfig.props(ClientActor(dbActorRef))
+  lazy val clientActorRef: ActorRef = context.actorOf(FromConfig.props(ClientActor(dbActorRef, Publisher("")))
     .withMailbox("mailbox.client-actor"), s"client-actor")
 
   type E <: Throwable

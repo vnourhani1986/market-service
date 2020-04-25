@@ -7,7 +7,7 @@ import akka.util.Timeout
 import com.snapptrip.DI._
 import com.snapptrip.api.Messages.{EventUserInfo, WebEngageEvent, WebEngageUserInfo}
 import com.snapptrip.formats.Formats._
-import com.snapptrip.kafka.Core.Key
+import com.snapptrip.kafka.Setting.Key
 import com.snapptrip.kafka.Publisher
 import com.snapptrip.models.User
 import com.snapptrip.utils.WebEngageConfig
@@ -21,7 +21,8 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 class EventActor(
-                  dbRouter: => ActorRef
+                  dbRouter: => ActorRef,
+                  kafkaActor: => ActorRef
                 )(
                   implicit
                   system: ActorSystem,
@@ -74,14 +75,15 @@ class EventActor(
       self ! SendToKafka(Key(userId, "track-event"), List(modifiedEvent))
 
     case SendToKafka(key, value) =>
+      kafkaActor ! (key, value)
 
-      Publisher.publish(key, value)
-        .recover {
-          case error: Throwable =>
-            logger.info(s"""publish data to kafka with error: ${error.getMessage}""")
-            SubscriberActor.subscriberActor ! NewRequest(key.toJson.compactPrint, value.head.compactPrint)
-            Done
-        }
+//      Publisher.publish(key, value)
+//        .recover {
+//          case error: Throwable =>
+//            logger.info(s"""publish data to kafka with error: ${error.getMessage}""")
+//            SubscriberActor.subscriberActor ! NewRequest(key.toJson.compactPrint, value.head.compactPrint)
+//            Done
+//        }
 
   }
 
@@ -122,8 +124,8 @@ object EventActor extends Converter {
 
   private implicit val timeout: Timeout = Timeout(30.second)
 
-  def apply(dbActor: => ActorRef): Props = {
-    Props(new EventActor(dbActor))
+  def apply(dbActor: => ActorRef, kafkaActor: => ActorRef): Props = {
+    Props(new EventActor(dbActor, kafkaActor))
   }
 
   def modifyEvent(user: User, event: JsValue): (String, JsValue) = {

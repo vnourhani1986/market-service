@@ -7,7 +7,7 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.pattern.ask
 import akka.util.Timeout
 import com.snapptrip.formats.Formats._
-import com.snapptrip.kafka.Core.Key
+import com.snapptrip.kafka.Setting.Key
 import com.snapptrip.kafka.Publisher
 import com.snapptrip.webengage.actor.WebEngageActor.{SendEventInfo, SendUserInfo}
 import com.snapptrip.webengage.api.WebEngageApi

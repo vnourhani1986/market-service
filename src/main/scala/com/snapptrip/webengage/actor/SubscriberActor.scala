@@ -5,7 +5,7 @@ import akka.util.Timeout
 import com.snapptrip.DI.{ec, system}
 import com.snapptrip.api.Messages.WebEngageUserInfoWithUserId
 import com.snapptrip.formats.Formats._
-import com.snapptrip.kafka.Core.Key
+import com.snapptrip.kafka.Setting.Key
 import com.snapptrip.kafka.Subscriber
 import com.snapptrip.webengage.actor.SubscriberActor.{NewRequest, Start}
 import com.snapptrip.webengage.actor.WebEngageActor.{SendEventInfo, SendUserInfo}

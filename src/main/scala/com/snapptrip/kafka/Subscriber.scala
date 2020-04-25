@@ -1,37 +1,56 @@
 package com.snapptrip.kafka
 
 import akka.Done
-import akka.kafka.scaladsl.Consumer.DrainingControl
+import akka.actor.ActorRef
 import akka.kafka.scaladsl.{Committer, Consumer}
 import akka.kafka.{CommitterSettings, ConsumerSettings, Subscriptions}
 import akka.stream.scaladsl.{Keep, Sink}
 import com.snapptrip.DI._
-import com.snapptrip.kafka.Core._
+import com.snapptrip.kafka.Setting._
 import com.snapptrip.webengage.actor.SubscriberActor
 import com.snapptrip.webengage.actor.SubscriberActor.NewRequest
 
-import scala.collection.immutable
 import scala.concurrent.Future
+
+class Subscriber(
+                  topic: String,
+                  actorRef: ActorRef,
+                  onCompleteMessage: String,
+                  maxBatch: Int,
+                  committerSetting: CommitterSettings,
+                  setting: ConsumerSettings[String, String]
+                ) {
+
+  def consumer: Consumer.Control = Consumer
+    .committableSource(setting, Subscriptions.topics(topic))
+    .map { msg =>
+      msg.committableOffset
+    }
+    .via(Committer.flow(committerSetting.withMaxBatch(maxBatch)))
+    .toMat(Sink.actorRef(actorRef, onCompleteMessage))(Keep.left)
+    .run()
+
+}
 
 object Subscriber {
 
-  private lazy val committerDefaultsInstance = CommitterSettings(system)
+  def apply(
+             topic: String,
+             actorRef: ActorRef
+           ): Consumer.Control = new Subscriber(topic, actorRef, "", 1, committerDefaultsInstance, consumerDefaults).consumer
+
+  private lazy val committerDefaultsInstance: CommitterSettings = CommitterSettings(system)
 
   def committerDefaults: CommitterSettings = committerDefaultsInstance
 
-  val consumerSettings: ConsumerSettings[String, String] = Core.consumerDefaults
-  val control: DrainingControl[immutable.Seq[Done]] =
-    Consumer
-      .committableSource(consumerSettings, Subscriptions.topics(topic))
-      .mapAsync(10) { msg =>
-        get(msg.record.key, msg.record.value).map { _ =>
-          msg.committableOffset
-        }
-      }
-      .via(Committer.flow(committerDefaults.withMaxBatch(1)))
-      .toMat(Sink.seq)(Keep.both)
-      .mapMaterializedValue(DrainingControl.apply)
-      .run()
+  val control = Consumer
+    .committableSource(consumerDefaults, Subscriptions.topics(topic))
+    .map { msg =>
+      msg.committableOffset
+    }
+    .via(Committer.flow(committerDefaults.withMaxBatch(1)))
+    .toMat(Sink.actorRef(SubscriberActor.subscriberActor, ""))(Keep.both)
+    .run()
 
   def get(key: String, value: String): Future[Done] = {
     SubscriberActor.subscriberActor ! NewRequest(key, value)

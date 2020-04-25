@@ -5,7 +5,7 @@ import akka.actor.{Actor, ActorRef, OneForOneStrategy, Props, SupervisorStrategy
 import akka.util.Timeout
 import com.snapptrip.api.Messages.WebEngageUserInfo
 import com.snapptrip.formats.Formats._
-import com.snapptrip.kafka.Core.Key
+import com.snapptrip.kafka.Setting.Key
 import com.snapptrip.models.User
 import com.snapptrip.webengage.Converter
 import com.snapptrip.webengage.actor.ClientActor.CheckUserResult
@@ -16,7 +16,8 @@ import spray.json._
 import scala.concurrent.duration._
 
 class UserActor(
-                 dbRouter: => ActorRef
+                 dbRouter: => ActorRef,
+                 kafkaActor: => ActorRef
                )(
                  implicit timeout: Timeout
                ) extends Actor with Converter with LazyLogging {
@@ -131,8 +132,8 @@ object UserActor {
 
   private implicit val timeout: Timeout = Timeout(30.second)
 
-  def apply(dbActor: => ActorRef): Props = {
-    Props(new UserActor(dbActor))
+  def apply(dbActor: => ActorRef, kafkaActor: => ActorRef): Props = {
+    Props(new UserActor(dbActor, kafkaActor))
   }
 
   case class RegisterUser(userInfo: WebEngageUserInfo, ref: ActorRef) extends Message
