@@ -1,6 +1,7 @@
 package com.snapptrip.api
 
 import akka.actor._
+import akka.pattern.ask
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.model.HttpMethods._
 import akka.http.scaladsl.model.headers._
@@ -8,7 +9,6 @@ import akka.http.scaladsl.model.{HttpResponse, StatusCodes, _}
 import akka.http.scaladsl.server.Directives.{entity, _}
 import akka.http.scaladsl.server.directives.RouteDirectives.{complete, reject}
 import akka.http.scaladsl.server.{Directive0, Route, _}
-import akka.pattern.ask
 import akka.util.Timeout
 import com.snapptrip.DI._
 import com.snapptrip.api.Messages._
@@ -18,8 +18,8 @@ import com.snapptrip.notification.sms.SmsService
 import com.snapptrip.repos.BusinessRepoImpl
 import com.snapptrip.utils.Validation
 import com.snapptrip.utils.formatters.{EmailFormatter, MobileNoFormatter}
-import com.snapptrip.webengage.actor.ClientActor
 import com.snapptrip.webengage.actor.ClientActor.{CheckUser, TrackEvent}
+import com.snapptrip.webengage.actor.{ClientActor, MarketServiceActor}
 import com.snapptrip.webengage.api.WebEngageApi
 import com.typesafe.scalalogging.LazyLogging
 import spray.json.{JsNumber, JsObject, JsString, JsValue}
@@ -36,6 +36,9 @@ class RouteHandler(system: ActorSystem, timeout: Timeout)
   implicit def executionContext: ExecutionContextExecutor = system.dispatcher
 
   val token: String = config.getString("web-engage.token")
+
+  val (props, clientActor) = MarketServiceActor()(system, executionContext, timeout)
+  system.actorOf(props, "market-service-actor")
 
   def routs: Route =
 
@@ -119,7 +122,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout)
                   val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
                   complete(HttpResponse(status = StatusCodes.BadRequest).withEntity(httpEntity))
                 } else {
-                  onSuccess(ClientActor.clientActor.ask(TrackEvent(event)).mapTo[(Boolean, JsObject)]) {
+                  onSuccess(clientActor.ask(TrackEvent(event)).mapTo[(Boolean, JsObject)]) {
                     case (status, entity) if status =>
                       val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
                       complete(HttpResponse(status = StatusCodes.Created).withEntity(httpEntity))
@@ -231,7 +234,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout)
                       val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
                       complete(HttpResponse(status = StatusCodes.BadRequest).withEntity(httpEntity))
                     } else {
-                      onSuccess(ClientActor.clientActor.ask(CheckUser(userInfo)).mapTo[(WebEngageUserInfoWithUserId, Int)]) {
+                      onSuccess(clientActor.ask(CheckUser(userInfo)).mapTo[(WebEngageUserInfoWithUserId, Int)]) {
                         case (user, status) if status == StatusCodes.OK.intValue || status == StatusCodes.Created.intValue =>
                           val entity = JsObject(
                             "status" -> JsString("SUCCESS"),
@@ -276,7 +279,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout)
                   val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
                   complete(HttpResponse(status = StatusCodes.BadRequest).withEntity(httpEntity))
                 } else {
-                  onSuccess(ClientActor.clientActor.ask(CheckUser(userInfo)).mapTo[(WebEngageUserInfoWithUserId, Int)]) {
+                  onSuccess(clientActor.ask(CheckUser(userInfo)).mapTo[(WebEngageUserInfoWithUserId, Int)]) {
                     case (_, status) if status == StatusCodes.OK.intValue || status == StatusCodes.Created.intValue =>
                       val entity = JsObject(
                         "status" -> JsString("SUCCESS")

@@ -3,8 +3,9 @@ package com.snapptrip.repos
 import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestKit}
 import com.snapptrip.actor.StopSystemAfterAll
+import com.snapptrip.models.User
 import com.snapptrip.webengage.actor.DBActor
-import com.snapptrip.webengage.actor.DBActor.{Find, Save, Update}
+import com.snapptrip.webengage.actor.DBActor._
 import org.scalamock.scalatest.AsyncMockFactory
 import org.scalatest.{MustMatchers, WordSpecLike}
 
@@ -30,10 +31,10 @@ class DBActorSpec extends TestKit(ActorSystem("test-system"))
       val repo = stub[Repo[A, F]]
       (repo.find _).when(*).returns(Future.successful(Some(A())))
 
-      val actor = system.actorOf(DBActor(repo))
+      val actor = system.actorOf(DBActor(repo), "db-actor")
 
       actor ! Find(F(), testActor)
-      expectMsg(Some(A()))
+      expectMsg(FindResult(Some(A()), null, testActor))
 
     }
     "save" in {
@@ -44,10 +45,10 @@ class DBActorSpec extends TestKit(ActorSystem("test-system"))
       val repo = stub[Repo[A, F]]
       (repo.save _).when(*).returns(Future.successful(A()))
 
-      val actor = system.actorOf(DBActor(repo))
+      val actor = system.actorOf(DBActor(repo), "db-actor")
 
       actor ! Save(A(), testActor)
-      expectMsg(A())
+      expectMsg(SaveResult(A(), testActor))
 
     }
     "update" in {
@@ -58,10 +59,10 @@ class DBActorSpec extends TestKit(ActorSystem("test-system"))
       val repo = stub[Repo[A, F]]
       (repo.update _).when(*).returns(Future.successful(true))
 
-      val actor = system.actorOf(DBActor(repo))
+      val actor = system.actorOf(DBActor(repo), "db-actor")
 
       actor ! Update(A(), testActor)
-      expectMsg(true)
+      expectMsg(UpdateResult(null, updated = true, testActor))
 
     }
   }
