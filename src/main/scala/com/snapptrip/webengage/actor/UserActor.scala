@@ -17,7 +17,7 @@ import scala.concurrent.duration._
 
 class UserActor(
                  dbRouter: => ActorRef,
-                 kafkaActor: => ActorRef
+                 publisherActor: => ActorRef
                )(
                  implicit timeout: Timeout
                ) extends Actor with Converter with LazyLogging {
@@ -74,15 +74,16 @@ class UserActor(
       self ! SendToKafka(Key(wUser.userId, "track-user"), List(wUser.toJson))
       context.parent ! CheckUserResult(Right(wUser.userId), ref)
 
-    //    case SendToKafka(key, value) =>
-    //
-    //      Publisher.publish(key, value)
-    //        .recover {
-    //          case error: Throwable =>
-    //            logger.info(s"""publish data to kafka with error: ${error.getMessage}""")
-    //            SubscriberActor.subscriberActor ! NewRequest(key.toJson.compactPrint, value.head.compactPrint)
-    //            Done
-    //        }
+    case SendToKafka(key, value) =>
+      publisherActor ! (key, value)
+
+//      Publisher.publish(key, value)
+//        .recover {
+//          case error: Throwable =>
+//            logger.info(s"""publish data to kafka with error: ${error.getMessage}""")
+//            SubscriberActor.subscriberActor ! NewRequest(key.toJson.compactPrint, value.head.compactPrint)
+//            Done
+//        }
 
   }
 

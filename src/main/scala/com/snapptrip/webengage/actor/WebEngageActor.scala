@@ -2,44 +2,35 @@ package com.snapptrip.webengage.actor
 
 import akka.Done
 import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, PoisonPill, Props}
-import akka.dispatch.ControlMessage
+import akka.dispatch.{ControlMessage, PriorityGenerator, UnboundedStablePriorityMailbox}
 import akka.http.scaladsl.model.StatusCodes
 import akka.pattern.ask
 import akka.util.Timeout
-import com.snapptrip.formats.Formats._
-import com.snapptrip.kafka.Setting.Key
-import com.snapptrip.kafka.Publisher
-import com.snapptrip.webengage.actor.WebEngageActor.{SendEventInfo, SendUserInfo}
-import com.snapptrip.webengage.api.WebEngageApi
-import com.typesafe.scalalogging.LazyLogging
-import spray.json._
 import com.snapptrip.DI._
 import com.snapptrip.api.Messages.WebEngageUserInfoWithUserId
+import com.snapptrip.formats.Formats._
+import com.snapptrip.kafka.Publisher
+import com.snapptrip.kafka.Setting.Key
+import com.snapptrip.webengage.actor.WebEngageActor.{SendEventInfo, SendUserInfo}
+import com.snapptrip.webengage.api.WebEngageApi
+import com.typesafe.config.Config
+import com.typesafe.scalalogging.LazyLogging
+import spray.json._
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{FiniteDuration, _}
 import scala.util.Random
 
-object WebEngageActor {
-
-  private implicit val timeout: Timeout = Timeout(30.second)
-  val webEngageActor: ActorRef = system.actorOf(Props(new WebEngageActor), s"webengage-actor-${Random.nextInt}")
-
-  case class SendUserInfo(user: WebEngageUserInfoWithUserId, retryCount: Int) extends ControlMessage
-
-  case class SendEventInfo(userId: String, event: JsValue, retryCount: Int) extends ControlMessage
-
-}
-
 class WebEngageActor(
+                      publisherActor: ActorRef
+                    )(
                       implicit
                       system: ActorSystem,
                       ec: ExecutionContext,
                       timeout: Timeout
                     ) extends Actor with LazyLogging {
 
-  val retryStep = 10
-  val retryMax = 5
+  import WebEngageActor._
 
   override def receive(): Receive = {
 
@@ -136,4 +127,37 @@ class WebEngageActor(
 
 }
 
+object WebEngageActor {
 
+  def apply(
+             publisherActor: ActorRef
+           )(
+             implicit
+             system: ActorSystem,
+             ec: ExecutionContext,
+             timeout: Timeout
+           ): Props = Props(new WebEngageActor(publisherActor))
+
+  private implicit val timeout: Timeout = Timeout(30.second)
+  val webEngageActor: ActorRef = system.actorOf(Props(new WebEngageActor(null)), s"webengage-actor-${Random.nextInt}")
+
+  val retryStep = 10
+  val retryMax = 5
+
+  case class SendUserInfo(user: WebEngageUserInfoWithUserId, retryCount: Int) extends Message
+
+  case class SendEventInfo(userId: String, event: JsValue, retryCount: Int) extends Message
+
+  class Mailbox(
+                 setting: ActorSystem.Settings,
+                 config: Config
+               ) extends UnboundedStablePriorityMailbox(
+    PriorityGenerator {
+      case _: SendUserInfo => 0
+      case _: SendEventInfo => 1
+      case _ => 2
+      case _: PoisonPill => 3
+    })
+
+
+}

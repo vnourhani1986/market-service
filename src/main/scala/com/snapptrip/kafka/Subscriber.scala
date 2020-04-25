@@ -37,7 +37,7 @@ object Subscriber {
   def apply(
              topic: String,
              actorRef: ActorRef
-           ): Consumer.Control = new Subscriber(topic, actorRef, "", 1, committerDefaultsInstance, consumerDefaults).consumer
+           ): Subscriber = new Subscriber(topic, actorRef, "", 1, committerDefaultsInstance, consumerDefaults)
 
   private lazy val committerDefaultsInstance: CommitterSettings = CommitterSettings(system)
 

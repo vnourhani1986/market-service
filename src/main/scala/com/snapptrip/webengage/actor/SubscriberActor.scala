@@ -1,44 +1,31 @@
 package com.snapptrip.webengage.actor
 
-import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, Props, _}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props, _}
 import akka.util.Timeout
 import com.snapptrip.DI.{ec, system}
 import com.snapptrip.api.Messages.WebEngageUserInfoWithUserId
 import com.snapptrip.formats.Formats._
 import com.snapptrip.kafka.Setting.Key
-import com.snapptrip.kafka.Subscriber
-import com.snapptrip.webengage.actor.SubscriberActor.{NewRequest, Start}
 import com.snapptrip.webengage.actor.WebEngageActor.{SendEventInfo, SendUserInfo}
 import com.typesafe.scalalogging.LazyLogging
 import spray.json.JsonParser
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.{FiniteDuration, _}
+import scala.concurrent.duration._
 import scala.util.Random
 
 class SubscriberActor(
+                       publisherActor: ActorRef
+                     )(
                        implicit
                        system: ActorSystem,
                        ec: ExecutionContext,
                        timeout: Timeout
                      ) extends Actor with LazyLogging {
 
-
-  // start subscriber
-  Subscriber
-
-  //
-  val retryStep = 1
-  val retryMax = 5
-
-  self ! Start()
-
   override def receive(): Receive = {
 
-    case Start() =>
-      logger.info(s"""start subscriber actor""")
-
-    case NewRequest(key, value) =>
+    case (key: String, value: String) =>
 
       val userId = JsonParser(key).convertTo[Key].userId
       val keyType = JsonParser(key).convertTo[Key].keyType
@@ -47,34 +34,37 @@ class SubscriberActor(
         if (context.child(s"webengage-actor-$userId").isDefined) {
           context.child(s"webengage-actor-$userId").foreach(_ ! SendUserInfo(user, 1))
         } else {
-          context.actorOf(Props(new WebEngageActor), s"webengage-actor-$userId") ! SendUserInfo(user, 1)
+          context.actorOf(WebEngageActor(publisherActor).withMailbox("mailbox.webengage-actor"), s"webengage-actor-$userId") ! SendUserInfo(user, 1)
         }
       } else if (keyType == "track-event") {
         val event = JsonParser(value)
         if (context.child(s"webengage-actor-$userId").isDefined) {
           context.child(s"webengage-actor-$userId").foreach(_ ! SendEventInfo(userId, event, 1))
         } else {
-          context.actorOf(Props(new WebEngageActor), s"webengage-actor-$userId") ! SendEventInfo(userId, event, 1)
+          context.actorOf(WebEngageActor(publisherActor).withMailbox("mailbox.webengage-actor"), s"webengage-actor-$userId") ! SendEventInfo(userId, event, 1)
         }
       }
 
-    case x: Any =>
-      logger.info(s"""welcome to subscriber actor $x""")
-
-  }
-
-  def retry(start: Start, time: FiniteDuration): Cancellable = {
-    context.system.scheduler.scheduleOnce(time, self, start)
   }
 
 }
 
 object SubscriberActor {
 
-  private implicit val timeout: Timeout = Timeout(30.second)
-  val subscriberActor: ActorRef = system.actorOf(Props(new SubscriberActor), s"subscriber-Actor-${Random.nextInt}")
+  def apply(
+             publisherActor: ActorRef
+           )(
+             implicit
+             system: ActorSystem,
+             ec: ExecutionContext,
+             timeout: Timeout
+           ): Props = Props(new SubscriberActor(publisherActor))
 
-  case class Start()
+  private implicit val timeout: Timeout = Timeout(30.second)
+  val subscriberActor: ActorRef = system.actorOf(Props(new SubscriberActor(null)), s"subscriber-Actor-${Random.nextInt}")
+
+  val retryStep = 1
+  val retryMax = 5
 
   case class NewRequest(key: String, value: String)
 

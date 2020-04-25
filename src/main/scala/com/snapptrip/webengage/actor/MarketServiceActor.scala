@@ -4,7 +4,8 @@ import akka.actor.SupervisorStrategy.Resume
 import akka.actor.{Actor, ActorRef, ActorSystem, OneForOneStrategy, Props, SupervisorStrategy}
 import akka.routing.FromConfig
 import akka.util.Timeout
-import com.snapptrip.kafka.Publisher
+import com.snapptrip.DI._
+import com.snapptrip.kafka.{Publisher, Subscriber}
 import com.snapptrip.repos.WebEngageUserRepoImpl
 import com.typesafe.scalalogging.LazyLogging
 
@@ -18,9 +19,12 @@ class MarketServiceActor(
                           timeout: Timeout
                         ) extends Actor with LazyLogging {
 
+  val publisherActor: ActorRef = Publisher("webengage")
+  private val subscriberActorRef: ActorRef = context.actorOf(SubscriberActor(publisherActor)(system, ex, timeout), "subscriber-actor")
+  private val subscriber = Subscriber("webengage", subscriberActorRef)
   private lazy val dbActorRef: ActorRef = context.actorOf(FromConfig.props(DBActor(WebEngageUserRepoImpl))
     .withMailbox("mailbox.db-actor"), s"db-router")
-  lazy val clientActorRef: ActorRef = context.actorOf(FromConfig.props(ClientActor(dbActorRef, Publisher("")))
+  lazy val clientActorRef: ActorRef = context.actorOf(FromConfig.props(ClientActor(dbActorRef, publisherActor))
     .withMailbox("mailbox.client-actor"), s"client-actor")
 
   type E <: Throwable

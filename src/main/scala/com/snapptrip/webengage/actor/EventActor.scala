@@ -1,19 +1,15 @@
 package com.snapptrip.webengage.actor
 
-import akka.Done
 import akka.actor.SupervisorStrategy.Resume
 import akka.actor.{Actor, ActorRef, ActorSystem, OneForOneStrategy, Props, SupervisorStrategy}
 import akka.util.Timeout
 import com.snapptrip.DI._
 import com.snapptrip.api.Messages.{EventUserInfo, WebEngageEvent, WebEngageUserInfo}
-import com.snapptrip.formats.Formats._
 import com.snapptrip.kafka.Setting.Key
-import com.snapptrip.kafka.Publisher
 import com.snapptrip.models.User
 import com.snapptrip.utils.WebEngageConfig
 import com.snapptrip.webengage.Converter
 import com.snapptrip.webengage.actor.DBActor.{Find, Save, Update}
-import com.snapptrip.webengage.actor.SubscriberActor.NewRequest
 import com.typesafe.scalalogging.LazyLogging
 import spray.json._
 
@@ -22,7 +18,7 @@ import scala.concurrent.duration._
 
 class EventActor(
                   dbRouter: => ActorRef,
-                  kafkaActor: => ActorRef
+                  publisherActor: => ActorRef
                 )(
                   implicit
                   system: ActorSystem,
@@ -75,15 +71,15 @@ class EventActor(
       self ! SendToKafka(Key(userId, "track-event"), List(modifiedEvent))
 
     case SendToKafka(key, value) =>
-      kafkaActor ! (key, value)
+      publisherActor ! (key, value)
 
-//      Publisher.publish(key, value)
-//        .recover {
-//          case error: Throwable =>
-//            logger.info(s"""publish data to kafka with error: ${error.getMessage}""")
-//            SubscriberActor.subscriberActor ! NewRequest(key.toJson.compactPrint, value.head.compactPrint)
-//            Done
-//        }
+    //      Publisher.publish(key, value)
+    //        .recover {
+    //          case error: Throwable =>
+    //            logger.info(s"""publish data to kafka with error: ${error.getMessage}""")
+    //            SubscriberActor.subscriberActor ! NewRequest(key.toJson.compactPrint, value.head.compactPrint)
+    //            Done
+    //        }
 
   }
 

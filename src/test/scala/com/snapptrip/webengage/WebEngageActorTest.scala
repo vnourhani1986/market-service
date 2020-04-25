@@ -25,7 +25,7 @@ class WebEngageActorTest extends TestKit(system) with ImplicitSender
 
     "send back messages :" in {
 
-      val actor = system.actorOf(Props(new WebEngageActor), "fghjkl")
+      val actor = system.actorOf(Props(new WebEngageActor(null)), "fghjkl")
 
       val user = WebEngageUserInfoWithUserId(
         userId = "c3df9e0a-9695-4b12-9e4f-b74b9d15438d",
