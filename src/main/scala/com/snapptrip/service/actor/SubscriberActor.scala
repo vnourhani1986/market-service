@@ -1,4 +1,4 @@
-package com.snapptrip.webengage.actor
+package com.snapptrip.service.actor
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props, _}
 import akka.util.Timeout
@@ -6,7 +6,7 @@ import com.snapptrip.DI.{ec, system}
 import com.snapptrip.api.Messages.WebEngageUserInfoWithUserId
 import com.snapptrip.formats.Formats._
 import com.snapptrip.kafka.Setting.Key
-import com.snapptrip.webengage.actor.WebEngageActor.{SendEventInfo, SendUserInfo}
+import com.snapptrip.service.actor.WebEngageActor.{SendEventInfo, SendUserInfo}
 import com.typesafe.scalalogging.LazyLogging
 import spray.json.JsonParser
 

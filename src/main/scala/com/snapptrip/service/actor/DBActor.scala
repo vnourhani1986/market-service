@@ -1,4 +1,4 @@
-package com.snapptrip.webengage.actor
+package com.snapptrip.service.actor
 
 import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props}
 import akka.dispatch.{BoundedStablePriorityMailbox, ControlMessage, PriorityGenerator}

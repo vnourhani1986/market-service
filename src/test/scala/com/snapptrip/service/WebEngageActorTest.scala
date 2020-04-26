@@ -1,12 +1,12 @@
-package com.snapptrip.webengage
+package com.snapptrip.service
 
 import akka.actor.Props
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import akka.util.Timeout
 import com.snapptrip.DI.{ec, materializer, system}
 import com.snapptrip.api.Messages.WebEngageUserInfoWithUserId
-import com.snapptrip.webengage.actor.WebEngageActor
-import com.snapptrip.webengage.actor.WebEngageActor.SendUserInfo
+import com.snapptrip.service.actor.WebEngageActor
+import com.snapptrip.service.actor.WebEngageActor.SendUserInfo
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import spray.json.{JsObject, JsString}
 

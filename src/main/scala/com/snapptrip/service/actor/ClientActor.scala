@@ -1,4 +1,4 @@
-package com.snapptrip.webengage.actor
+package com.snapptrip.service.actor
 
 import akka.actor.SupervisorStrategy.Resume
 import akka.actor.{Actor, ActorRef, ActorSystem, OneForOneStrategy, PoisonPill, Props, SupervisorStrategy}
@@ -6,7 +6,7 @@ import akka.dispatch.{PriorityGenerator, UnboundedStablePriorityMailbox}
 import akka.routing.FromConfig
 import akka.util.Timeout
 import com.snapptrip.api.Messages.{WebEngageEvent, WebEngageUserInfo}
-import com.snapptrip.webengage.Converter
+import com.snapptrip.service.Converter
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 
@@ -19,8 +19,6 @@ class ClientActor(
                    implicit timeout: Timeout
                  ) extends Actor with Converter with LazyLogging {
 
-  type E <: Throwable
-
   import ClientActor._
 
   lazy val userActorRef: ActorRef = context.actorOf(FromConfig.props(UserActor(dbRouter, publisherActor)), s"user-router")
@@ -32,7 +30,7 @@ class ClientActor(
 
   override def supervisorStrategy: SupervisorStrategy =
     OneForOneStrategy(10, 60 seconds, loggingEnabled = true) {
-      case _: E => Resume
+      case _: Throwable => Resume
     }
 
   override def receive(): Receive = {
@@ -86,8 +84,8 @@ object ClientActor {
       case _: CheckUserResult => 2
       case _: RegisterUserResult => 3
       case _: TrackEvent => 4
-      case _ => 5
       case _: PoisonPill => 6
+      case _ => 5
     })
 
 }

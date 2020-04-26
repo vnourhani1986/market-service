@@ -1,78 +1,43 @@
 package com.snapptrip.api
 
 import akka.actor._
-import akka.pattern.ask
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
-import akka.http.scaladsl.model.HttpMethods._
-import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.model.{HttpResponse, StatusCodes, _}
 import akka.http.scaladsl.server.Directives.{entity, _}
-import akka.http.scaladsl.server.directives.RouteDirectives.{complete, reject}
-import akka.http.scaladsl.server.{Directive0, Route, _}
+import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.directives.RouteDirectives.complete
+import akka.pattern.ask
 import akka.util.Timeout
-import com.snapptrip.DI._
+import com.snapptrip.DI.config
 import com.snapptrip.api.Messages._
 import com.snapptrip.formats.Formats._
 import com.snapptrip.notification.email.EmailService
 import com.snapptrip.notification.sms.SmsService
-import com.snapptrip.repos.BusinessRepoImpl
-import com.snapptrip.utils.Validation
+import com.snapptrip.utils.EmailAddress
+import com.snapptrip.utils.formatters.MobileNoFormatter.isNumber
 import com.snapptrip.utils.formatters.{EmailFormatter, MobileNoFormatter}
-import com.snapptrip.webengage.actor.ClientActor.{CheckUser, TrackEvent}
-import com.snapptrip.webengage.actor.{ClientActor, MarketServiceActor}
-import com.snapptrip.webengage.api.WebEngageApi
+import com.snapptrip.service.actor.ClientActor.{CheckUser, TrackEvent}
+import com.snapptrip.service.api.WebEngageApi
 import com.typesafe.scalalogging.LazyLogging
 import spray.json.{JsNumber, JsObject, JsString, JsValue}
 
-import scala.concurrent.ExecutionContextExecutor
-import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext
 
-class RouteHandler(system: ActorSystem, timeout: Timeout)
-  extends Validation
-    with LazyLogging {
+class RouteHandler(
+                    token: String,
+                    clientActor: ActorRef
+                  )(implicit
+                    system: ActorSystem,
+                    timeout: Timeout,
+                    ec: ExecutionContext
+                  ) extends RouteParser
+  with LazyLogging {
 
-  implicit val requestTimeout: Timeout = timeout
+  import RouteHandler._
 
-  implicit def executionContext: ExecutionContextExecutor = system.dispatcher
-
-  val token: String = config.getString("web-engage.token")
-
-  val (props, clientActor) = MarketServiceActor()(system, executionContext, timeout)
-  system.actorOf(props, "market-service-actor")
-
-  def routs: Route =
-
-    HealthCheckHandler.route ~ ping ~ AuthHandler.routes ~ webEngageApi(token)
-
-  def userValidator[T](validator: UserInfo => Boolean, userInfo: UserInfo)(route: UserInfo => Route): Route = {
-    if (validator(userInfo)) {
-      route(userInfo)
-    } else {
-      reject(AuthorizationFailedRejection)
-    }
-  }
-
-  def users(userInfo: UserInfo): Route = {
-
-    pathPrefix("v1" / "users") {
-      path("business-info") {
-        get {
-          logger.info(
-            s"""get business info request""")
-          onSuccess(BusinessRepoImpl.get) {
-            businessInfo =>
-              logger.info(s"""get business response by result size: ${businessInfo.size} by user : $userInfo""")
-              complete(businessInfo)
-          }
-        }
-      }
-    }
-  }
-
-  private val cors = new CORSHandler {}
+  def routs: Route = HealthCheckHandler().route ~ ping ~ webEngageApi(token)
 
   def ping: Route = path("api" / "v1" / "webengage" / "user" / "check") {
-    //The OPTIONS endpoint - doesn't need to do anything except send an OK
     options {
       cors.corsHandler(complete(StatusCodes.OK))
     }
@@ -99,43 +64,6 @@ class RouteHandler(system: ActorSystem, timeout: Timeout)
           }
         }
       } ~
-        path("events") {
-          post {
-            headerValue(extractToken(token)) { _ =>
-              entity(as[WebEngageEvent]) { body =>
-
-                val event = body.copy(
-                  user = body.user.copy(
-                    mobile_no = MobileNoFormatter.format(body.user.mobile_no),
-                    email = EmailFormatter.format(body.user.email)
-                  )
-                )
-
-                val msg = validation(event.user.email, event.user.mobile_no)
-
-                if (msg.nonEmpty) {
-                  logger.info(s"""post check user response by result: server error and status: ${StatusCodes.BadRequest.intValue}""")
-                  val entity = JsObject(
-                    "status" -> JsString("ERROR"),
-                    "error" -> JsString(msg)
-                  ).toString
-                  val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
-                  complete(HttpResponse(status = StatusCodes.BadRequest).withEntity(httpEntity))
-                } else {
-                  onSuccess(clientActor.ask(TrackEvent(event)).mapTo[(Boolean, JsObject)]) {
-                    case (status, entity) if status =>
-                      val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
-                      complete(HttpResponse(status = StatusCodes.Created).withEntity(httpEntity))
-                    case (status, entity) if !status =>
-                      logger.info(s"""post event : $event response by result: server error and status: $status""")
-                      val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
-                      complete(HttpResponse(status = StatusCodes.InternalServerError).withEntity(httpEntity))
-                  }
-                }
-              }
-            }
-          }
-        } ~
         path("sms") {
           post {
             headerValue(extractToken(token)) { _ =>
@@ -217,23 +145,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout)
               cors.corsHandler {
                 headerValue(extractToken(token)) { _ =>
                   entity(as[WebEngageUserInfo]) { body =>
-
-                    val userInfo = body.copy(
-                      mobile_no = MobileNoFormatter.format(body.mobile_no),
-                      email = EmailFormatter.format(body.email)
-                    )
-
-                    val msg = validation(userInfo.email, userInfo.mobile_no)
-
-                    if (msg.nonEmpty) {
-                      logger.info(s"""post check user : $userInfo response by result: server error and status: ${StatusCodes.BadRequest.intValue}""")
-                      val entity = JsObject(
-                        "status" -> JsString("ERROR"),
-                        "error" -> JsString(msg)
-                      ).toString
-                      val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
-                      complete(HttpResponse(status = StatusCodes.BadRequest).withEntity(httpEntity))
-                    } else {
+                    bodyParser(body)(formatBody)(validateBody) { userInfo =>
                       onSuccess(clientActor.ask(CheckUser(userInfo)).mapTo[(WebEngageUserInfoWithUserId, Int)]) {
                         case (user, status) if status == StatusCodes.OK.intValue || status == StatusCodes.Created.intValue =>
                           val entity = JsObject(
@@ -261,24 +173,7 @@ class RouteHandler(system: ActorSystem, timeout: Timeout)
           headerValue(extractToken(token)) { _ =>
             post {
               entity(as[WebEngageUserInfo]) { body =>
-
-                val userInfo = body.copy(
-                  mobile_no = MobileNoFormatter.format(body.mobile_no),
-                  email = EmailFormatter.format(body.email)
-                )
-
-                val msg = validation(userInfo.email, userInfo.mobile_no)
-
-                if (msg.nonEmpty) {
-                  logger.info(s"""post register user : $userInfo response by result: server error and status: ${StatusCodes.BadRequest.intValue}""")
-                  val entity = JsObject(
-                    "status" -> JsString("ERROR"),
-                    "error" -> JsString(msg),
-                    "user_id" -> JsString("-1")
-                  ).toString
-                  val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
-                  complete(HttpResponse(status = StatusCodes.BadRequest).withEntity(httpEntity))
-                } else {
+                bodyParser(body)(formatBody)(validateBody) { userInfo =>
                   onSuccess(clientActor.ask(CheckUser(userInfo)).mapTo[(WebEngageUserInfoWithUserId, Int)]) {
                     case (_, status) if status == StatusCodes.OK.intValue || status == StatusCodes.Created.intValue =>
                       val entity = JsObject(
@@ -298,45 +193,85 @@ class RouteHandler(system: ActorSystem, timeout: Timeout)
               }
             }
           }
+        } ~
+        path("events") {
+          post {
+            headerValue(extractToken(token)) { _ =>
+              entity(as[WebEngageEvent]) { body =>
+                bodyParser(body)(formatBody)(validateBody) { event =>
+                  onSuccess(clientActor.ask(TrackEvent(event)).mapTo[(Boolean, JsObject)]) {
+                    case (status, entity) if status =>
+                      val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
+                      complete(HttpResponse(status = StatusCodes.Created).withEntity(httpEntity))
+                    case (status, entity) if !status =>
+                      logger.info(s"""post event : $event response by result: server error and status: $status""")
+                      val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
+                      complete(HttpResponse(status = StatusCodes.InternalServerError).withEntity(httpEntity))
+                  }
+                }
+              }
+            }
+          }
         }
-
     }
-  }
-
-  def extractToken(token: String): HttpHeader => Option[String] = {
-    case HttpHeader("token", value) if token == value => Some(token)
-    case _ => None
   }
 
 }
 
-trait CORSHandler {
+object RouteHandler extends CORSHandler {
 
-  private val corsResponseHeaders = List(
-    `Access-Control-Allow-Origin`.*,
-    `Access-Control-Allow-Credentials`(true),
-    `Access-Control-Allow-Headers`("*"),
-    `Access-Control-Max-Age`(1.day.toMillis) //Tell browser to cache OPTIONS requests
-  )
+  def apply(
+             token: String = token,
+             clientActor: ActorRef
+           )(implicit
+             system: ActorSystem,
+             timeout: Timeout,
+             ec: ExecutionContext
+           ): RouteHandler = new RouteHandler(token, clientActor)
 
-  //this directive adds access control headers to normal responses
-  private def addAccessControlHeaders: Directive0 = {
-    respondWithHeaders(corsResponseHeaders)
+  val token: String = config.getString("web-engage.token")
+
+  private val cors = new CORSHandler {}
+
+  def formatBody(body: WebEngageEvent): WebEngageEvent = {
+    body.copy(
+      user = body.user.copy(
+        mobile_no = MobileNoFormatter.format(body.user.mobile_no),
+        email = EmailFormatter.format(body.user.email)
+      )
+    )
   }
 
-  //this handles preflight OPTIONS requests.
-  private def preflightRequestHandler: Route = options {
-    complete(HttpResponse(StatusCodes.OK).
-      withHeaders(`Access-Control-Allow-Methods`(OPTIONS, POST, PUT, GET, DELETE)))
+  def formatBody(body: WebEngageUserInfo): WebEngageUserInfo = {
+    body.copy(
+      mobile_no = MobileNoFormatter.format(body.mobile_no),
+      email = EmailFormatter.format(body.email)
+    )
   }
 
-  // Wrap the Route with this method to enable adding of CORS headers
-  def corsHandler(r: Route): Route = addAccessControlHeaders {
-    preflightRequestHandler ~ r
+  def validateBody[A](body: A): (Boolean, String) = {
+
+    val (mobileNo, email) = body match {
+      case b: WebEngageEvent => (b.user.mobile_no, b.user.email)
+      case b: WebEngageUserInfo => (b.mobile_no, b.email)
+    }
+
+    val isValidMobile = isNumber(mobileNo.getOrElse(""))
+    val isValidEmail = EmailAddress.isValid(email.getOrElse(""))
+
+    if (email.isEmpty && mobileNo.isEmpty) {
+      (false, "one of the fields of mobile or email need to be defined")
+    }
+    else if (email.nonEmpty && !isValidEmail && mobileNo.nonEmpty && !isValidMobile) {
+      (false, "invalid Email and mobile number")
+    }
+    else if (email.nonEmpty && !isValidEmail) {
+      (false, "invalid Email")
+    }
+    else if (mobileNo.nonEmpty && !isValidMobile) {
+      (false, "invalid mobile number")
+    }
+    else (true, "")
   }
 
-  // Helper method to add CORS headers to HttpResponse
-  // preventing duplication of CORS headers across code
-  def addCORSHeaders(response: HttpResponse): HttpResponse =
-    response.withHeaders(corsResponseHeaders)
 }

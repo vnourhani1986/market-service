@@ -34,7 +34,7 @@ object Publisher {
 
   def apply(topic: String): ActorRef = new Publisher(
     bufferSize,
-    OverflowStrategy.backpressure,
+    OverflowStrategy.dropHead,
     topic,
     producerDefaults).actorRef
 

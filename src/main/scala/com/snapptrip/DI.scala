@@ -19,5 +19,5 @@ object DI {
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val timezone: ZoneId = ZoneId.of(config.getString("timezone"))
   implicit val db: Database = com.snapptrip.repos.database.DBManager.db
-  implicit val dbSession = SlickSession.forConfig("slick-postgres")
+  implicit val dbSession: SlickSession = SlickSession.forConfig("slick-postgres")
 }

@@ -1,4 +1,4 @@
-package com.snapptrip.webengage
+package com.snapptrip.service
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.testkit.{ImplicitSender, TestKit}
@@ -8,7 +8,7 @@ import com.snapptrip.api.Messages.WebEngageEvent
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import spray.json.JsonParser
 import com.snapptrip.formats.Formats._
-import com.snapptrip.webengage.api.WebEngageApi
+import com.snapptrip.service.api.WebEngageApi
 
 import scala.concurrent.duration._
 

@@ -1,18 +1,16 @@
-package com.snapptrip.webengage.actor
+package com.snapptrip.service.actor
 
 import akka.Done
 import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, PoisonPill, Props}
-import akka.dispatch.{ControlMessage, PriorityGenerator, UnboundedStablePriorityMailbox}
+import akka.dispatch.{PriorityGenerator, UnboundedStablePriorityMailbox}
 import akka.http.scaladsl.model.StatusCodes
-import akka.pattern.ask
 import akka.util.Timeout
 import com.snapptrip.DI._
 import com.snapptrip.api.Messages.WebEngageUserInfoWithUserId
 import com.snapptrip.formats.Formats._
 import com.snapptrip.kafka.Publisher
 import com.snapptrip.kafka.Setting.Key
-import com.snapptrip.webengage.actor.WebEngageActor.{SendEventInfo, SendUserInfo}
-import com.snapptrip.webengage.api.WebEngageApi
+import com.snapptrip.service.api.WebEngageApi
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import spray.json._
@@ -45,6 +43,7 @@ class WebEngageActor(
               val rt = retryCount + 1
               retry(user, (retryCount * retryStep).second, rt)
             } else {
+              publisherActor ! (Key(user.userId, "track-user").toJson.compactPrint, user.toJson) // how to go there is not
               Publisher.publish(Key(user.userId, "track-user"), List(user.toJson)).map { _ =>
                 self ! PoisonPill
               }.recover {
@@ -110,11 +109,6 @@ class WebEngageActor(
             }
         }
 
-    case _ =>
-      logger.info(s"""other messages""")
-      sender ? JsObject("status" -> JsString("success"), "message" -> JsString("other messages"))
-      self ! PoisonPill
-
   }
 
   def retry(issueRequest: WebEngageUserInfoWithUserId, time: FiniteDuration, retryCount: Int): Cancellable = {
@@ -155,8 +149,8 @@ object WebEngageActor {
     PriorityGenerator {
       case _: SendUserInfo => 0
       case _: SendEventInfo => 1
-      case _ => 2
       case _: PoisonPill => 3
+      case _ => 2
     })
 
 

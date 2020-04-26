@@ -4,8 +4,8 @@ import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestKit}
 import com.snapptrip.actor.StopSystemAfterAll
 import com.snapptrip.models.User
-import com.snapptrip.webengage.actor.DBActor
-import com.snapptrip.webengage.actor.DBActor._
+import com.snapptrip.service.actor.DBActor
+import com.snapptrip.service.actor.DBActor._
 import org.scalamock.scalatest.AsyncMockFactory
 import org.scalatest.{MustMatchers, WordSpecLike}
 

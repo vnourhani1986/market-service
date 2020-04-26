@@ -1,4 +1,4 @@
-package com.snapptrip.webengage.actor
+package com.snapptrip.service.actor
 
 import akka.actor.SupervisorStrategy.Resume
 import akka.actor.{Actor, ActorRef, ActorSystem, OneForOneStrategy, Props, SupervisorStrategy}
@@ -8,8 +8,8 @@ import com.snapptrip.api.Messages.{EventUserInfo, WebEngageEvent, WebEngageUserI
 import com.snapptrip.kafka.Setting.Key
 import com.snapptrip.models.User
 import com.snapptrip.utils.WebEngageConfig
-import com.snapptrip.webengage.Converter
-import com.snapptrip.webengage.actor.DBActor.{Find, Save, Update}
+import com.snapptrip.service.Converter
+import com.snapptrip.service.actor.DBActor.{Find, Save, Update}
 import com.typesafe.scalalogging.LazyLogging
 import spray.json._
 

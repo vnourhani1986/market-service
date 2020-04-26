@@ -4,7 +4,7 @@ import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, LocalDateTime}
 import java.util.UUID
 
-import com.snapptrip.api.HealthCheckResponse
+import com.snapptrip.api.HealthCheckHandler.HealthCheckResponse
 import com.snapptrip.api.Messages._
 import com.snapptrip.kafka.Setting.Key
 import com.snapptrip.models._
@@ -16,16 +16,8 @@ object Formats extends FormatsComponent
 trait FormatsComponent extends JsonProtocol {
 
   // models
-  implicit val userInfoFormat = jsonFormat3(UserInfo)
-  implicit val businessNameFormater = jsonFormat2(BusinessName)
-  implicit val businessInfoFormater = jsonFormat5(BusinessInfo)
-  implicit val filterUserFormater = jsonFormat5(FilterUser)
-  implicit val newUserFormater = jsonFormat7(NewUser)
-  implicit val editUserFormater = jsonFormat7(EditUser)
   implicit val userFormater = jsonFormat15(User)
   implicit val userDBFromatFormater = jsonFormat15(UserDBFormat)
-  implicit val userLoginInfoFormat = jsonFormat2(UserLoginInfo)
-  implicit val userLoginRequestFormat = jsonFormat3(UserLoginRequest)
   implicit val healthCheckResponseFormatter = jsonFormat4(HealthCheckResponse)
   implicit val httpErrorFormat = jsonFormat3(HttpError)
   implicit val metaDataFormat = jsonFormat9(MetaData)

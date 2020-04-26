@@ -1,4 +1,4 @@
-package com.snapptrip.webengage
+package com.snapptrip.service
 
 import akka.actor.{ActorInitializationException, ActorKilledException, OneForOneStrategy, SupervisorStrategy}
 import akka.actor.SupervisorStrategy.{Decider, Restart, Stop}

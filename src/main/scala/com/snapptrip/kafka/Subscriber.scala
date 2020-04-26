@@ -7,8 +7,8 @@ import akka.kafka.{CommitterSettings, ConsumerSettings, Subscriptions}
 import akka.stream.scaladsl.{Keep, Sink}
 import com.snapptrip.DI._
 import com.snapptrip.kafka.Setting._
-import com.snapptrip.webengage.actor.SubscriberActor
-import com.snapptrip.webengage.actor.SubscriberActor.NewRequest
+import com.snapptrip.service.actor.SubscriberActor
+import com.snapptrip.service.actor.SubscriberActor.NewRequest
 
 import scala.concurrent.Future
 

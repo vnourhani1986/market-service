@@ -1,4 +1,4 @@
-package com.snapptrip.webengage.actor
+package com.snapptrip.service.actor
 
 import akka.actor.SupervisorStrategy.Resume
 import akka.actor.{Actor, ActorRef, ActorSystem, OneForOneStrategy, Props, SupervisorStrategy}
@@ -27,25 +27,19 @@ class MarketServiceActor(
   lazy val clientActorRef: ActorRef = context.actorOf(FromConfig.props(ClientActor(dbActorRef, publisherActor))
     .withMailbox("mailbox.client-actor"), s"client-actor")
 
-  type E <: Throwable
-
   override def preStart(): Unit = {
     super.preStart()
   }
 
   override def supervisorStrategy: SupervisorStrategy =
     OneForOneStrategy(10, 60 seconds, loggingEnabled = true) {
-      case _: E => Resume
+      case _: Exception => Resume
     }
 
   override def receive(): Receive = {
 
-    case _ =>
+    case message: Any => clientActorRef.forward(message)
 
-  }
-
-  def getChild(name: String): Option[ActorRef] = {
-    context.child(name)
   }
 
 }
@@ -57,11 +51,7 @@ object MarketServiceActor {
     system: ActorSystem,
     ex: ExecutionContext,
     timeout: Timeout
-  ): (Props, ActorRef) = {
-    val instance = new MarketServiceActor()
-    (Props(instance), instance.clientActorRef)
-  }
-
+  ) = Props(new MarketServiceActor())
 
 }
 

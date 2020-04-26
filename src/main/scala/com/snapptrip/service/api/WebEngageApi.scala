@@ -1,4 +1,4 @@
-package com.snapptrip.webengage.api
+package com.snapptrip.service.api
 
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
