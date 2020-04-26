@@ -25,7 +25,7 @@ import scala.concurrent.ExecutionContext
 
 class RouteHandler(
                     token: String,
-                    clientActor: ActorRef
+                    marketServiceActor: ActorRef
                   )(implicit
                     system: ActorSystem,
                     timeout: Timeout,
@@ -146,7 +146,7 @@ class RouteHandler(
                 headerValue(extractToken(token)) { _ =>
                   entity(as[WebEngageUserInfo]) { body =>
                     bodyParser(body)(formatBody)(validateBody) { userInfo =>
-                      onSuccess(clientActor.ask(CheckUser(userInfo)).mapTo[(WebEngageUserInfoWithUserId, Int)]) {
+                      onSuccess(marketServiceActor.ask(CheckUser(userInfo)).mapTo[(WebEngageUserInfoWithUserId, Int)]) {
                         case (user, status) if status == StatusCodes.OK.intValue || status == StatusCodes.Created.intValue =>
                           val entity = JsObject(
                             "status" -> JsString("SUCCESS"),
@@ -174,7 +174,7 @@ class RouteHandler(
             post {
               entity(as[WebEngageUserInfo]) { body =>
                 bodyParser(body)(formatBody)(validateBody) { userInfo =>
-                  onSuccess(clientActor.ask(CheckUser(userInfo)).mapTo[(WebEngageUserInfoWithUserId, Int)]) {
+                  onSuccess(marketServiceActor.ask(CheckUser(userInfo)).mapTo[(WebEngageUserInfoWithUserId, Int)]) {
                     case (_, status) if status == StatusCodes.OK.intValue || status == StatusCodes.Created.intValue =>
                       val entity = JsObject(
                         "status" -> JsString("SUCCESS")
@@ -199,7 +199,7 @@ class RouteHandler(
             headerValue(extractToken(token)) { _ =>
               entity(as[WebEngageEvent]) { body =>
                 bodyParser(body)(formatBody)(validateBody) { event =>
-                  onSuccess(clientActor.ask(TrackEvent(event)).mapTo[(Boolean, JsObject)]) {
+                  onSuccess(marketServiceActor.ask(TrackEvent(event)).mapTo[(Boolean, JsObject)]) {
                     case (status, entity) if status =>
                       val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
                       complete(HttpResponse(status = StatusCodes.Created).withEntity(httpEntity))
@@ -222,12 +222,12 @@ object RouteHandler extends CORSHandler {
 
   def apply(
              token: String = token,
-             clientActor: ActorRef
+             marketServiceActor: ActorRef
            )(implicit
              system: ActorSystem,
              timeout: Timeout,
              ec: ExecutionContext
-           ): RouteHandler = new RouteHandler(token, clientActor)
+           ): RouteHandler = new RouteHandler(token, marketServiceActor)
 
   val token: String = config.getString("web-engage.token")
 

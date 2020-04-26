@@ -6,8 +6,8 @@ import akka.http.scaladsl.server.Directives.handleExceptions
 import com.snapptrip.DI._
 import com.snapptrip.api._
 import com.snapptrip.repos.database.DBSetup
-import com.snapptrip.utils.CommonDirectives
 import com.snapptrip.service.actor.MarketServiceActor
+import com.snapptrip.utils.CommonDirectives
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.Future
@@ -23,7 +23,7 @@ object Bootstrap extends App with RequestTimeout with CommonDirectives with Lazy
 
   val api = handleExceptions(ExtendedExceptionHandler.handle()(logger)) {
     commonDirectives {
-      RouteHandler(clientActor = marketServiceActor).routs
+      RouteHandler(marketServiceActor = marketServiceActor).routs
     }
   }
 
