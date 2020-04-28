@@ -1,4 +1,4 @@
-package com.snapptrip.actor
+package com.snapptrip.service.actor
 
 import akka.testkit.TestKit
 import org.scalatest.{BeforeAndAfterAll, Suite}

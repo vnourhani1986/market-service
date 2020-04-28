@@ -1,8 +1,7 @@
-package com.snapptrip.actor.client
+package com.snapptrip.service.actor
 
 import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestKit}
-import com.snapptrip.actor.StopSystemAfterAll
 import org.scalatest.{MustMatchers, WordSpecLike}
 
 class ClientActorSpec extends TestKit(ActorSystem("test-system"))

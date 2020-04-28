@@ -1,18 +1,17 @@
-package com.snapptrip.service
+package com.snapptrip.service.actor
 
 import akka.actor.Props
-import akka.testkit.{ImplicitSender, TestKit, TestProbe}
+import akka.testkit.{ImplicitSender, TestKit}
 import akka.util.Timeout
-import com.snapptrip.DI.{ec, materializer, system}
+import com.snapptrip.DI.{ec, system}
 import com.snapptrip.api.Messages.WebEngageUserInfoWithUserId
-import com.snapptrip.service.actor.WebEngageActor
 import com.snapptrip.service.actor.WebEngageActor.SendUserInfo
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import spray.json.{JsObject, JsString}
 
 import scala.concurrent.duration._
 
-class WebEngageActorTest extends TestKit(system) with ImplicitSender
+class WebEngageActorSpec extends TestKit(system) with ImplicitSender
   with WordSpecLike with Matchers with BeforeAndAfterAll {
 
   private implicit val timeout: Timeout = Timeout(1.minute)

@@ -1,20 +1,20 @@
-package com.snapptrip.repos
+package com.snapptrip.service.actor
 
 import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestKit}
-import com.snapptrip.actor.StopSystemAfterAll
-import com.snapptrip.models.User
+import com.snapptrip.repos.Repo
 import com.snapptrip.service.actor.DBActor
 import com.snapptrip.service.actor.DBActor._
-import org.scalamock.scalatest.AsyncMockFactory
+import org.scalamock.scalatest.MockFactory
 import org.scalatest.{MustMatchers, WordSpecLike}
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
+import scala.util.Random
 
 class DBActorSpec extends TestKit(ActorSystem("test-system"))
   with WordSpecLike
   with ImplicitSender
-  with AsyncMockFactory
+  with MockFactory
   with MustMatchers
   with StopSystemAfterAll {
 
@@ -31,10 +31,10 @@ class DBActorSpec extends TestKit(ActorSystem("test-system"))
       val repo = stub[Repo[A, F]]
       (repo.find _).when(*).returns(Future.successful(Some(A())))
 
-      val actor = system.actorOf(DBActor(repo), "db-actor")
+      val actor = system.actorOf(DBActor(repo), s"""db-actor-${Random.nextInt}""")
 
       actor ! Find(F(), testActor)
-      expectMsg(FindResult(Some(A()), null, testActor))
+      expectMsg(FindResult(F(), Some(A()), testActor))
 
     }
     "save" in {
@@ -45,7 +45,7 @@ class DBActorSpec extends TestKit(ActorSystem("test-system"))
       val repo = stub[Repo[A, F]]
       (repo.save _).when(*).returns(Future.successful(A()))
 
-      val actor = system.actorOf(DBActor(repo), "db-actor")
+      val actor = system.actorOf(DBActor(repo), s"""db-actor-${Random.nextInt}""")
 
       actor ! Save(A(), testActor)
       expectMsg(SaveResult(A(), testActor))
@@ -59,10 +59,10 @@ class DBActorSpec extends TestKit(ActorSystem("test-system"))
       val repo = stub[Repo[A, F]]
       (repo.update _).when(*).returns(Future.successful(true))
 
-      val actor = system.actorOf(DBActor(repo), "db-actor")
+      val actor = system.actorOf(DBActor(repo), s"""db-actor-${Random.nextInt}""")
 
       actor ! Update(A(), testActor)
-      expectMsg(UpdateResult(null, updated = true, testActor))
+      expectMsg(UpdateResult(A(), updated = true, testActor))
 
     }
   }

@@ -1,22 +1,23 @@
 package com.snapptrip.service
 
-import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.UUID
+import java.time.{LocalDate, LocalDateTime}
 
 import com.snapptrip.api.Messages.{WebEngageUserInfo, WebEngageUserInfoWithUserId}
 import com.snapptrip.models.User
 import com.snapptrip.utils.WebEngageConfig
 import com.snapptrip.utils.formatters.EmailFormatter
+import com.typesafe.scalalogging.LazyLogging
+import spray.json.{JsObject, JsString, JsValue}
 
 import scala.util.Try
 
-trait Converter {
+trait Converter extends LazyLogging {
 
-  def converter(webEngageUserInfo: WebEngageUserInfo): User = {
+  def converter(webEngageUserInfo: WebEngageUserInfo, newUserId: String): User = {
     User(
       userName = webEngageUserInfo.user_name,
-      userId = UUID.randomUUID().toString,
+      userId = newUserId,
       name = webEngageUserInfo.name,
       family = webEngageUserInfo.family,
       email = EmailFormatter.format(webEngageUserInfo.email),
@@ -47,21 +48,49 @@ trait Converter {
   def converter(user: User, birthDate: Option[String]): WebEngageUserInfoWithUserId = {
     WebEngageUserInfoWithUserId(
       userId = user.userId,
-      //      user_name = user.userName,
       firstName = user.name,
       lastName = user.family,
       email = user.email,
       phone = user.mobileNo,
       birthDate = birthDate,
-      gender = user.gender,
-      //      provider = user.provider
+      gender = user.gender
     )
   }
 
-  def dateTimeFormatter(date: LocalDate): Option[String] = {
+  def dateTimeFormatter[D]: PartialFunction[(D, DateTimeFormatter, Option[String]), Either[Throwable, String]] = {
+    case (d: LocalDate, format, offset) =>
+      Try {
+        d.atStartOfDay().format(format) + offset.getOrElse("")
+      }.toEither
+    case (d: LocalDateTime, format, offset) =>
+      Try {
+        d.format(format) + offset.getOrElse("")
+      }.toEither
+    case (d: String, format, offset) =>
+      Try {
+        LocalDateTime.parse(d).format(format) + offset.getOrElse("")
+      }.toEither
+  }
+
+  def modifyEvent(userId: String, event: JsValue, timeFormat: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME,
+                  timeOffset: String = WebEngageConfig.timeOffset): Either[Throwable, (String, JsObject)] = {
     Try {
-      date.atStartOfDay().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss" + WebEngageConfig.timeOffset))
-    }.toOption
+      val eventTime = event.asJsObject.fields.filterKeys(_ == "event").values.flatMap {
+        _.asJsObject.fields.filterKeys(_ == "eventTime").toList.flatMap(x =>
+          JsObject(x._1 -> JsString(x._2.compactPrint.replace(s""""""", ""))).fields.toList)
+      }.toList.map { js =>
+        dateTimeFormatter(js._2.compactPrint.replace(s""""""", ""), timeFormat, Some(timeOffset)) match {
+          case Right(value) => (js._1, JsString(value))
+          case Left(exception: Exception) => throw exception
+        }
+      }
+      val jsUserId = JsObject("userId" -> JsString(userId)).fields.toList.head
+      val jsEvent = event.asJsObject.fields.filterKeys(_ == "event").values.flatMap { x =>
+        eventTime ::: x.asJsObject.fields.filterKeys(_ != "eventTime").toList
+      }
+      val content = JsObject(jsUserId, "event" -> JsObject(jsEvent.toMap))
+      (userId, content)
+    }.toEither
   }
 
 }

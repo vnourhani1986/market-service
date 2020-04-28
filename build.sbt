@@ -31,6 +31,7 @@ libraryDependencies ++= {
     "org.scalatest"               %% "scalatest"            % scalaTestVersion  ,
     "org.scalamock"               %% "scalamock-scalatest-support" % "3.6.0"    % Test,
     "org.scalamock"               %% "scalamock"            % "4.1.0"           % Test,
+    "net.manub"                   %% "scalatest-embedded-kafka" % "2.0.0"       % Test,
 
     // Database libs
     "com.typesafe.slick"          %% "slick"                % slickVersion,
