@@ -1,30 +1,34 @@
 package com.snapptrip.service.actor
 
-import akka.actor.Props
+import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestKit}
 import akka.util.Timeout
-import com.snapptrip.DI.{ec, system}
 import com.snapptrip.api.Messages.WebEngageUserInfoWithUserId
 import com.snapptrip.service.actor.WebEngageActor.SendUserInfo
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+import org.scalamock.scalatest.MockFactory
+import org.scalatest.{MustMatchers, WordSpecLike}
 import spray.json.{JsObject, JsString}
 
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 import scala.concurrent.duration._
+import scala.util.Random
 
-class WebEngageActorSpec extends TestKit(system) with ImplicitSender
-  with WordSpecLike with Matchers with BeforeAndAfterAll {
+class WebEngageActorSpec extends TestKit(ActorSystem("test-system"))
+  with WordSpecLike
+  with ImplicitSender
+  with MockFactory
+  with MustMatchers
+  with StopSystemAfterAll {
 
   private implicit val timeout: Timeout = Timeout(1.minute)
-
-  override def afterAll {
-    TestKit.shutdownActorSystem(system)
-  }
 
   "An webengage actor" must {
 
     "send back messages :" in {
 
-      val actor = system.actorOf(Props(new WebEngageActor(null)), "fghjkl")
+      implicit val executionContext: ExecutionContextExecutor = ExecutionContext.global
+
+      val actor = system.actorOf(WebEngageActor(testActor), s"webengage-actor-${Random.nextInt}")
 
       val user = WebEngageUserInfoWithUserId(
         userId = "c3df9e0a-9695-4b12-9e4f-b74b9d15438d",
@@ -37,7 +41,6 @@ class WebEngageActorSpec extends TestKit(system) with ImplicitSender
       )
 
       actor ! SendUserInfo(user, 1)
-      Thread.sleep(3000)
       expectMsg((200, JsObject("status" -> JsString("success"))))
 
     }

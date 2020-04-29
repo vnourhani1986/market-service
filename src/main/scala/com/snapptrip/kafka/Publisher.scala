@@ -1,6 +1,5 @@
 package com.snapptrip.kafka
 
-import akka.Done
 import akka.actor.ActorRef
 import akka.kafka.ProducerSettings
 import akka.kafka.scaladsl.Producer
@@ -11,8 +10,6 @@ import com.snapptrip.formats.Formats._
 import com.snapptrip.kafka.Setting._
 import org.apache.kafka.clients.producer.ProducerRecord
 import spray.json.{JsValue, _}
-
-import scala.concurrent.Future
 
 class Publisher(
                  bufferSize: Int,
@@ -38,20 +35,6 @@ object Publisher {
     topic,
     producerDefaults).actorRef
 
-  val bufferSize = 1000
-
-  def publish(key: Key, data: List[JsValue]): Future[Done] = {
-
-    Source
-      .fromIterator(() => data.iterator)
-      .map { hotel =>
-        hotel.toString
-      }
-      .map(value => {
-        new ProducerRecord[String, String](topic, key.toJson.compactPrint, value)
-      })
-      .runWith(Producer.plainSink(producerDefaults))
-
-  }
+  val bufferSize = 0
 
 }

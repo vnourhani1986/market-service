@@ -1,14 +1,11 @@
 package com.snapptrip.service.actor
 
-import akka.Done
 import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, PoisonPill, Props}
 import akka.dispatch.{PriorityGenerator, UnboundedStablePriorityMailbox}
 import akka.http.scaladsl.model.StatusCodes
 import akka.util.Timeout
-import com.snapptrip.DI._
 import com.snapptrip.api.Messages.WebEngageUserInfoWithUserId
 import com.snapptrip.formats.Formats._
-import com.snapptrip.kafka.Publisher
 import com.snapptrip.kafka.Setting.Key
 import com.snapptrip.service.api.WebEngageApi
 import com.typesafe.config.Config
@@ -17,7 +14,6 @@ import spray.json._
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{FiniteDuration, _}
-import scala.util.Random
 
 class WebEngageActor(
                       publisherActor: ActorRef
@@ -43,15 +39,7 @@ class WebEngageActor(
               val rt = retryCount + 1
               retry(user, (retryCount * retryStep).second, rt)
             } else {
-              publisherActor ! (Key(user.userId, "track-user").toJson.compactPrint, user.toJson) // how to go there is not
-              Publisher.publish(Key(user.userId, "track-user"), List(user.toJson)).map { _ =>
-                self ! PoisonPill
-              }.recover {
-                case error: Throwable =>
-                  logger.info(s"""publish user data to kafka with error: ${error.getMessage}""")
-                  self ! SendUserInfo(user, retryCount)
-                  Done
-              }
+              publisherActor ! (Key(user.userId, "track-user"), user.toJson)
             }
 
           case _ =>
@@ -60,14 +48,7 @@ class WebEngageActor(
               val rt = retryCount + 1
               retry(user, (retryCount * retryStep).second, rt)
             } else {
-              Publisher.publish(Key(user.userId, "track-user"), List(user.toJson)).map { _ =>
-                self ! PoisonPill
-              }.recover {
-                case error: Throwable =>
-                  logger.info(s"""publish user data to kafka with error: ${error.getMessage}""")
-                  self ! SendUserInfo(user, retryCount)
-                  Done
-              }
+              publisherActor ! (Key(user.userId, "track-user"), user.toJson)
             }
         }
 
@@ -82,14 +63,7 @@ class WebEngageActor(
               val rt = retryCount + 1
               retry(userId, event, (retryCount * retryStep).second, rt)
             } else {
-              Publisher.publish(Key(userId, "track-event"), List(event)).map { _ =>
-                self ! PoisonPill
-              }.recover {
-                case error: Throwable =>
-                  logger.info(s"""publish event data to kafka with error: ${error.getMessage}""")
-                  self ! SendEventInfo(userId, event, retryCount)
-                  Done
-              }
+              publisherActor ! (Key(userId, "track-event"), event)
             }
 
           case _ =>
@@ -98,14 +72,7 @@ class WebEngageActor(
               val rt = retryCount + 1
               retry(userId, event, (retryCount * retryStep).second, rt)
             } else {
-              Publisher.publish(Key(userId, "track-event"), List(event)).map { _ =>
-                self ! PoisonPill
-              }.recover {
-                case error: Throwable =>
-                  logger.info(s"""publish event data to kafka with error: ${error.getMessage}""")
-                  self ! SendEventInfo(userId, event, retryCount)
-                  Done
-              }
+              publisherActor ! (Key(userId, "track-event"), event)
             }
         }
 
@@ -131,9 +98,6 @@ object WebEngageActor {
              ec: ExecutionContext,
              timeout: Timeout
            ): Props = Props(new WebEngageActor(publisherActor))
-
-  private implicit val timeout: Timeout = Timeout(30.second)
-  val webEngageActor: ActorRef = system.actorOf(Props(new WebEngageActor(null)), s"webengage-actor-${Random.nextInt}")
 
   val retryStep = 10
   val retryMax = 5

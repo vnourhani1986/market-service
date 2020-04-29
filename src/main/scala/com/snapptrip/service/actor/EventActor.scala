@@ -78,14 +78,6 @@ class EventActor(
     case SendToKafka(key, value) =>
       publisherActor ! (key, value)
 
-    //      Publisher.publish(key, value)
-    //        .recover {
-    //          case error: Throwable =>
-    //            logger.info(s"""publish data to kafka with error: ${error.getMessage}""")
-    //            SubscriberActor.subscriberActor ! NewRequest(key.toJson.compactPrint, value.head.compactPrint)
-    //            Done
-    //        }
-
   }
 
   //    def trackEventWithoutUserId(request: WebEngageEvent): Future[(Boolean, JsObject)] = {

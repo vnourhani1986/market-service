@@ -21,7 +21,7 @@ class MarketServiceActor(
 
   val publisherActor: ActorRef = Publisher("webengage")
   private val subscriberActorRef: ActorRef = context.actorOf(SubscriberActor(publisherActor)(system, ex, timeout), "subscriber-actor")
-  private val subscriber = Subscriber("webengage", subscriberActorRef)
+  private val subscriber = Subscriber("test-2088440552", subscriberActorRef)
   private lazy val dbActorRef: ActorRef = context.actorOf(FromConfig.props(DBActor(WebEngageUserRepoImpl))
     .withMailbox("mailbox.db-actor"), s"db-router")
   lazy val clientActorRef: ActorRef = context.actorOf(FromConfig.props(ClientActor(dbActorRef, publisherActor))
