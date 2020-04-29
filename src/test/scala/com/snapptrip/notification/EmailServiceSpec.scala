@@ -2,24 +2,20 @@ package com.snapptrip.notification
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.testkit.{ImplicitSender, TestKit}
-import akka.util.Timeout
 import com.snapptrip.DI.{ec, system}
 import com.snapptrip.api.Messages.WebEngageEmailBody
 import com.snapptrip.formats.Formats._
 import com.snapptrip.notification.email.EmailService
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+import com.snapptrip.service.actor.StopSystemAfterAll
+import org.scalatest.{Matchers, WordSpecLike}
 import spray.json.JsonParser
 
-import scala.concurrent.duration._
-
-class EmailServiceTest extends TestKit(system) with ImplicitSender
-  with WordSpecLike with Matchers with BeforeAndAfterAll {
-
-  private implicit val timeout: Timeout = Timeout(1.minute)
-
-  override def afterAll {
-    TestKit.shutdownActorSystem(system)
-  }
+class EmailServiceSpec
+  extends TestKit(system)
+    with ImplicitSender
+    with WordSpecLike
+    with Matchers
+    with StopSystemAfterAll {
 
   "An webengage actor" must {
 

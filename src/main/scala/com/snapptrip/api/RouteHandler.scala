@@ -256,8 +256,8 @@ object RouteHandler extends CORSHandler {
       case b: WebEngageUserInfo => (b.mobile_no, b.email)
     }
 
-    val isValidMobile = isNumber(mobileNo.getOrElse(""))
-    val isValidEmail = EmailAddress.isValid(email.getOrElse(""))
+    val isValidMobile = MobileNoFormatter.format(mobileNo).isDefined
+    val isValidEmail = EmailFormatter.format(email).isDefined
 
     if (email.isEmpty && mobileNo.isEmpty) {
       (false, "one of the fields of mobile or email need to be defined")

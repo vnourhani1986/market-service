@@ -2,29 +2,24 @@ package com.snapptrip.notification
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.testkit.{ImplicitSender, TestKit}
-import akka.util.Timeout
 import com.snapptrip.DI.{ec, system}
 import com.snapptrip.api.Messages.WebEngageSMSBody
 import com.snapptrip.formats.Formats._
 import com.snapptrip.notification.sms.SmsService
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+import com.snapptrip.service.actor.StopSystemAfterAll
+import org.scalatest.{Matchers, WordSpecLike}
 import spray.json.JsonParser
 
-import scala.concurrent.duration._
-
-class SMSServiceTest extends TestKit(system) with ImplicitSender
-  with WordSpecLike with Matchers with BeforeAndAfterAll {
-
-  private implicit val timeout: Timeout = Timeout(1.minute)
-
-  override def afterAll {
-    TestKit.shutdownActorSystem(system)
-  }
+class SMSServiceSpec
+  extends TestKit(system)
+    with ImplicitSender
+    with WordSpecLike
+    with Matchers
+    with StopSystemAfterAll {
 
   "An webengage actor" must {
 
     "send back messages :" in {
-
 
       val bodyJson =
         s"""{

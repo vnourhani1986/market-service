@@ -2,7 +2,7 @@ package com.snapptrip.utils
 
 import org.scalatest.{Matchers, WordSpecLike}
 
-class ValidationTest
+class ValidationSpec
   extends WordSpecLike
     with Matchers
     with Validation {
