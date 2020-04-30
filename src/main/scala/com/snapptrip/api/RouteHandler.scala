@@ -1,5 +1,7 @@
 package com.snapptrip.api
 
+import java.time.format.DateTimeFormatter
+
 import akka.actor._
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.model.{HttpResponse, StatusCodes, _}
@@ -13,6 +15,7 @@ import com.snapptrip.api.Messages._
 import com.snapptrip.formats.Formats._
 import com.snapptrip.notification.email.EmailService
 import com.snapptrip.notification.sms.SmsService
+import com.snapptrip.service.Converter
 import com.snapptrip.service.actor.ClientActor.{CheckUser, TrackEvent}
 import com.snapptrip.service.api.WebEngageApi
 import com.snapptrip.utils.formatters.{EmailFormatter, MobileNoFormatter}
@@ -218,7 +221,7 @@ class RouteHandler(
 
 }
 
-object RouteHandler extends CORSHandler {
+object RouteHandler extends CORSHandler with Converter {
 
   def apply(
              token: String = token,
@@ -251,15 +254,24 @@ object RouteHandler extends CORSHandler {
 
   def validateBody[A](body: A): (Boolean, String) = {
 
-    val (mobileNo, email) = body match {
-      case b: WebEngageEvent => (b.user.mobile_no, b.user.email)
-      case b: WebEngageUserInfo => (b.mobile_no, b.email)
+    val (mobileNo, email, birthDate) = body match {
+      case b: WebEngageEvent => (b.user.mobile_no, b.user.email, None)
+      case b: WebEngageUserInfo => (b.mobile_no, b.email, b.birth_date)
+    }
+
+    val birthDateIsValid = birthDate.forall { b =>
+      dateTimeFormatter(b, DateTimeFormatter.ISO_LOCAL_DATE_TIME, None) match {
+        case Right(_) => true
+        case Left(_) => false
+      }
     }
 
     val isValidMobile = MobileNoFormatter.format(mobileNo).isDefined
     val isValidEmail = EmailFormatter.format(email).isDefined
 
-    if (email.isEmpty && mobileNo.isEmpty) {
+    if (!birthDateIsValid) {
+      (false, "birth date is not valid")
+    } else if (email.isEmpty && mobileNo.isEmpty) {
       (false, "one of the fields of mobile or email need to be defined")
     }
     else if (email.nonEmpty && !isValidEmail && mobileNo.nonEmpty && !isValidMobile) {
