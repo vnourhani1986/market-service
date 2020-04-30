@@ -5,49 +5,44 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.marshalling.Marshal
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
+import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.scaladsl.{Sink, Source}
+import com.snapptrip.DI._
 import com.snapptrip.utils.WebEngageConfig
 import com.typesafe.scalalogging.LazyLogging
 import spray.json.JsValue
-import com.snapptrip.DI._
 
 import scala.concurrent.Future
 
 object WebEngageApi extends LazyLogging {
 
-  def trackUser(request: JsValue): Future[(StatusCode, ResponseEntity)] = {
+  def trackUser(request: JsValue): Future[(StatusCode, JsValue)] = {
 
-    (for {
+    for {
       body <- Marshal(request).to[RequestEntity]
       request = HttpRequest(HttpMethods.POST, WebEngageConfig.usersUrl)
         .withHeaders(RawHeader("Authorization", WebEngageConfig.apiKey))
         .withEntity(body.withContentType(ContentTypes.`application/json`))
       connectionFlow = Http().outgoingConnectionHttps(WebEngageConfig.host, settings = WebEngageConfig.clientConnectionSettings)
-      (status, entity) <- Source.single(request).via(connectionFlow).runWith(Sink.head).map(x => (x.status, x.entity))
+      (status, responseBody) <- Source.single(request).via(connectionFlow).runWith(Sink.head).map(x => (x.status, x.entity))
+      entity <- Unmarshal(responseBody).to[JsValue]
     } yield {
       (status, entity)
-    }).recover {
-      case error: Throwable =>
-        logger.info(s"""response track user: $request to web engage with result:${error.getMessage} with status: ${StatusCodes.InternalServerError}""")
-        (StatusCodes.InternalServerError, null)
     }
   }
 
-  def trackEventWithUserId(request: JsValue): Future[(StatusCode, ResponseEntity)] = {
+  def trackEvent(request: JsValue): Future[(StatusCode, JsValue)] = {
 
-    (for {
+    for {
       body <- Marshal(request).to[RequestEntity]
       request = HttpRequest(HttpMethods.POST, WebEngageConfig.eventsUrl)
         .withHeaders(RawHeader("Authorization", WebEngageConfig.apiKey))
         .withEntity(body.withContentType(ContentTypes.`application/json`))
       connectionFlow = Http().outgoingConnectionHttps(WebEngageConfig.host, settings = WebEngageConfig.clientConnectionSettings)
-      (status, entity) <- Source.single(request).via(connectionFlow).runWith(Sink.head).map(x => (x.status, x.entity))
+      (status, responseBody) <- Source.single(request).via(connectionFlow).runWith(Sink.head).map(x => (x.status, x.entity))
+      entity <- Unmarshal(responseBody).to[JsValue]
     } yield {
       (status, entity)
-    }).recover {
-      case error: Throwable =>
-        logger.info(s"""response track event: $request to web engage with result:${error.getMessage} with status: ${StatusCodes.InternalServerError}""")
-        (StatusCodes.InternalServerError, null)
     }
   }
 

@@ -1,12 +1,12 @@
 package com.snapptrip.service.actor
 
 import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props}
-import akka.dispatch.{BoundedStablePriorityMailbox, ControlMessage, PriorityGenerator}
+import akka.dispatch.{ControlMessage, PriorityGenerator, UnboundedStablePriorityMailbox}
 import com.snapptrip.repos.Repo
+import com.snapptrip.utils.Exceptions.{ErrorCodes, ExtendedException}
 import com.typesafe.config.Config
 
-import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
 class DBActor[A, F](
                      repo: Repo[A, F]
@@ -21,14 +21,23 @@ class DBActor[A, F](
     case Find(f: F, ref, meta) =>
       val senderRef = sender()
       repo.find(f).map(r => senderRef ! FindResult(f, r, ref, meta))
+        .recover {
+          case error => Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref))
+        }
 
     case Save(a: A, ref, meta) =>
       val senderRef = sender()
       repo.save(a).map(r => senderRef ! SaveResult(r, ref, meta))
+        .recover {
+          case error => Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref))
+        }
 
     case Update(a: A, ref, meta) =>
       val senderRef = sender()
       repo.update(a).map(r => senderRef ! UpdateResult(a, r, ref, meta))
+        .recoverWith {
+          case error => Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref))
+        }
 
   }
 
@@ -55,14 +64,14 @@ object DBActor {
   class Mailbox(
                  setting: ActorSystem.Settings,
                  config: Config
-               ) extends BoundedStablePriorityMailbox(
+               ) extends UnboundedStablePriorityMailbox(
     PriorityGenerator {
       case _: Find[_, _] => 1
       case _: Save[_, _] => 0
       case _: Update[_, _] => 0
       case _: PoisonPill => 3
       case _ => 2
-    }, 1000, 30 seconds)
+    })
 
 
 }

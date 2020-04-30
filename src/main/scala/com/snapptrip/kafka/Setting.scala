@@ -12,6 +12,7 @@ object Setting {
 
   val conf: Config = ConfigFactory.load()
   val topic: String = config.getString("kafka.topic")
+  val errorTopic: String = config.getString("kafka.error-topic")
 
   case class Key(userId: String, keyType: String)
 

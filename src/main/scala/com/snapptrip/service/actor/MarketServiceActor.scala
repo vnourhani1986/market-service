@@ -1,12 +1,14 @@
 package com.snapptrip.service.actor
 
-import akka.actor.SupervisorStrategy.Resume
-import akka.actor.{Actor, ActorRef, ActorSystem, OneForOneStrategy, Props, SupervisorStrategy}
+import akka.actor.SupervisorStrategy.{Escalate, Restart, Resume, Stop}
+import akka.actor.{Actor, ActorInitializationException, ActorKilledException, ActorRef, ActorSystem, OneForOneStrategy, Props, SupervisorStrategy}
 import akka.routing.FromConfig
 import akka.util.Timeout
 import com.snapptrip.DI._
-import com.snapptrip.kafka.{Publisher, Subscriber}
+import com.snapptrip.kafka.{Publisher, Setting, Subscriber}
 import com.snapptrip.repos.UserRepoImpl
+import com.snapptrip.service.actor.ClientActor.CheckUserResult
+import com.snapptrip.utils.Exceptions.{ErrorCodes, ExtendedException}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.ExecutionContext
@@ -19,9 +21,11 @@ class MarketServiceActor(
                           timeout: Timeout
                         ) extends Actor with LazyLogging {
 
-  val publisherActor: ActorRef = Publisher("webengage")
-  private val subscriberActorRef: ActorRef = context.actorOf(SubscriberActor(publisherActor)(system, ex, timeout), "subscriber-actor")
-  private val subscriber = Subscriber("test-2088440552", subscriberActorRef)
+  val publisherActor: ActorRef = Publisher(Setting.topic)
+  val errorPublisherActor: ActorRef = Publisher(Setting.errorTopic)
+  private val subscriberActorRef: ActorRef = context.actorOf(
+    SubscriberActor(publisherActor, errorPublisherActor)(system, ex, timeout), "subscriber-actor")
+  private val subscriber = Subscriber(Setting.topic, subscriberActorRef)
   private lazy val dbActorRef: ActorRef = context.actorOf(FromConfig.props(DBActor(UserRepoImpl))
     .withMailbox("mailbox.db-actor"), s"db-router")
   lazy val clientActorRef: ActorRef = context.actorOf(FromConfig.props(ClientActor(dbActorRef, publisherActor))
@@ -33,7 +37,16 @@ class MarketServiceActor(
 
   override def supervisorStrategy: SupervisorStrategy =
     OneForOneStrategy(10, 60 seconds, loggingEnabled = true) {
-      case _: Exception => Resume
+      case _: ActorInitializationException => Stop
+      case _: ActorKilledException => Stop
+      case ex: ExtendedException if ex.errorCode == ErrorCodes.DatabaseError =>
+        if (ex.ref != null) clientActorRef ! CheckUserResult(Left(ex), ex.ref)
+        Resume
+      case ex: ExtendedException if ex.errorCode == ErrorCodes.AuthenticationError => Stop
+      case ex: ExtendedException if ex.errorCode == ErrorCodes.InvalidURL => Stop
+      case ex: ExtendedException if ex.errorCode == ErrorCodes.RestServiceError => Stop
+      case ex: ExtendedException if ex.errorCode == ErrorCodes.JsonParseError => Resume
+      case _: Exception => Restart
     }
 
   override def receive(): Receive = {

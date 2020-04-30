@@ -8,7 +8,8 @@ import com.snapptrip.api.HealthCheckHandler.HealthCheckResponse
 import com.snapptrip.api.Messages._
 import com.snapptrip.kafka.Setting.Key
 import com.snapptrip.models._
-import com.snapptrip.utils.{HttpError, MetaData}
+import com.snapptrip.utils.Exceptions.HttpError
+import com.snapptrip.utils.MetaData
 import spray.json.{RootJsonFormat, _}
 
 object Formats extends FormatsComponent

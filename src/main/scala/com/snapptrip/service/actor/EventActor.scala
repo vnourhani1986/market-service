@@ -11,6 +11,7 @@ import com.snapptrip.kafka.Setting.Key
 import com.snapptrip.models.User
 import com.snapptrip.service.Converter
 import com.snapptrip.service.actor.DBActor.{Find, Save, Update}
+import com.snapptrip.utils.Exceptions.{ErrorCodes, ExtendedException}
 import com.typesafe.scalalogging.LazyLogging
 import spray.json._
 
@@ -59,19 +60,21 @@ class EventActor(
           dbRouter ! Save(user, ref, eventOpt)
       }
 
-    case DBActor.UpdateResult(user: User, updated, _, eventOpt: Option[JsValue]) =>
+    case DBActor.UpdateResult(user: User, updated, ref, eventOpt: Option[JsValue]) =>
       if (updated) {
         val event = eventOpt.get
         val (userId, modifiedEvent) = modifyEvent(user.userId, event) match {
           case Right(value) => value
+          case Left(exception) => throw ExtendedException(exception.getMessage, ErrorCodes.JsonParseError, ref)
         }
         self ! SendToKafka(Key(userId, "track-event"), modifiedEvent)
       }
 
-    case DBActor.SaveResult(user: User, _, eventOpt: Option[JsValue]) =>
+    case DBActor.SaveResult(user: User, ref, eventOpt: Option[JsValue]) =>
       val event = eventOpt.get
       val (userId, modifiedEvent) = modifyEvent(user.userId, event) match {
         case Right(value) => value
+        case Left(exception) => throw ExtendedException(exception.getMessage, ErrorCodes.JsonParseError, ref)
       }
       self ! SendToKafka(Key(userId, "track-event"), modifiedEvent)
 

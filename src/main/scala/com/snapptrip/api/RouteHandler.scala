@@ -50,13 +50,15 @@ class RouteHandler(
             entity(as[JsValue]) { body =>
               onSuccess(WebEngageApi.trackUser(body)) {
                 case (status, entity) if status == StatusCodes.Created =>
-                  complete(HttpResponse(status = status).withEntity(entity))
+                  val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
+                  complete(HttpResponse(status = status).withEntity(httpEntity))
                 case (status, _) if status == StatusCodes.InternalServerError =>
                   logger.info(s"""post user: $body response by result: server error and status: $status""")
                   complete(HttpResponse(status = status))
                 case (status, entity) =>
                   logger.info(s"""post user: $body response by result: $entity and status: $status""")
-                  complete(HttpResponse(status = status).withEntity(entity))
+                  val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
+                  complete(HttpResponse(status = status).withEntity(httpEntity))
               }
             }
           }

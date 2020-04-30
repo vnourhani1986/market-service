@@ -1,12 +1,13 @@
 package com.snapptrip.service.actor
 
-import akka.actor.SupervisorStrategy.Resume
-import akka.actor.{Actor, ActorRef, ActorSystem, OneForOneStrategy, PoisonPill, Props, SupervisorStrategy}
+import akka.actor.SupervisorStrategy.{Restart, Resume, Stop}
+import akka.actor.{Actor, ActorInitializationException, ActorKilledException, ActorRef, ActorSystem, OneForOneStrategy, PoisonPill, Props, SupervisorStrategy}
 import akka.dispatch.{PriorityGenerator, UnboundedStablePriorityMailbox}
 import akka.routing.FromConfig
 import akka.util.Timeout
 import com.snapptrip.api.Messages.{WebEngageEvent, WebEngageUserInfo}
 import com.snapptrip.service.Converter
+import com.snapptrip.utils.Exceptions.{ErrorCodes, ExtendedException}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 
@@ -30,7 +31,15 @@ class ClientActor(
 
   override def supervisorStrategy: SupervisorStrategy =
     OneForOneStrategy(10, 60 seconds, loggingEnabled = true) {
-      case _: Throwable => Resume
+      case _: ActorInitializationException => Stop
+      case _: ActorKilledException => Stop
+      case ex: ExtendedException if ex.errorCode == ErrorCodes.TimeFormatError =>
+        if (ex.ref != null) self ! CheckUserResult(Left(ex), ex.ref)
+        Resume
+      case ex: ExtendedException if ex.errorCode == ErrorCodes.JsonParseError =>
+        if (ex.ref != null) self ! CheckUserResult(Left(ex), ex.ref)
+        Resume
+      case _: Throwable => Restart
     }
 
   override def receive(): Receive = {
@@ -49,7 +58,7 @@ class ClientActor(
 
     case TrackEvent(event) =>
       val ref = sender()
-      eventActorRef ! EventActor.TrackEvent(event, ref)
+      eventActorRef ! EventActor.TrackEvent(event, null)
       ref ! "Ok"
 
   }
@@ -70,7 +79,7 @@ object ClientActor {
 
   case class RegisterUserResult(result: Either[Exception, String], ref: ActorRef)
 
-  case class CheckUserResult(result: Either[Exception, String], ref: ActorRef)
+  case class CheckUserResult(result: Either[ExtendedException, String], ref: ActorRef)
 
   case class TrackEvent(event: WebEngageEvent) extends Message
 

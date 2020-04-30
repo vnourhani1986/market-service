@@ -86,11 +86,11 @@ class DBActorSpec extends TestKit(ActorSystem("test-system"))
       actor ! Update(A(), testActor)
 
 
-      expectMsg(FindResult(F(), Some(A()), testActor))
       expectMsg(SaveResult(A(), testActor))
       expectMsg(UpdateResult(A(), updated = true, testActor))
       expectMsg(UpdateResult(A(), updated = true, testActor))
       expectMsg(UpdateResult(A(), updated = true, testActor))
+      expectMsg(FindResult(F(), Some(A()), testActor))
       expectMsg(FindResult(F(), Some(A()), testActor))
       expectMsg(FindResult(F(), Some(A()), testActor))
       expectMsg(FindResult(F(), Some(A()), testActor))
