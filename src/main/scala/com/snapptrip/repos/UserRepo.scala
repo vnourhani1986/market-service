@@ -14,21 +14,9 @@ import spray.json.JsonParser
 
 import scala.concurrent.Future
 
-trait WebEngageUserRepo extends Repo[User, WebEngageUserInfo] {
-
-  def findByUserName(userName: Option[String]): Future[Option[User]]
-
-  def findOptionalByUserName(userName: Option[String]): Future[Option[User]]
-
-  def findOrCreateByUserName(userName: Option[String]): Future[User]
-
-  def get: Future[Seq[User]]
-
-  def findByFilter(filter: WebEngageUserInfo): Future[Option[User]]
+trait UserRepo extends Repo[User, WebEngageUserInfo] {
 
   def find(filter: WebEngageUserInfo): Future[Option[User]]
-
-  def findByFilter(mobileNo: Option[String], email: Option[String]): Future[Option[User]]
 
   def find(mobileNo: Option[String], email: Option[String]): Future[Seq[User]]
 
@@ -36,51 +24,11 @@ trait WebEngageUserRepo extends Repo[User, WebEngageUserInfo] {
 
   def update(user: User): Future[Boolean]
 
-  def isDisabled(userName: String): Future[Boolean]
+  def delete(userId: String): Future[Boolean]
 
 }
 
-object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableComponent {
-  override def findByUserName(userName: Option[String]): Future[Option[User]] = {
-    val query = userTable.filterOpt(userName)((table, un) => table.userName === un).result.headOption
-    db.run(query)
-  }
-
-  override def findOptionalByUserName(userName: Option[String]): Future[Option[User]] = {
-    val query = userTable.filterOpt(userName)((table, un) => table.userName === un).result.headOption
-    db.run(query)
-  }
-
-  override def findOrCreateByUserName(userName: Option[String]): Future[User] = {
-
-    val queryToFind = userTable.filterOpt(userName)((table, un) => table.userName === un).result.headOption
-    val queryToInsert = userTable returning userTable += User(userName = userName, userId = "1")
-
-    for {
-      userOpt <- db.run(queryToFind)
-      foundOrCreatedUser <- if (userOpt.isEmpty) db.run(queryToInsert) else Future {
-        userOpt.get
-      }
-    } yield foundOrCreatedUser
-  }
-
-  override def get: Future[Seq[User]] = {
-    val query = userTable
-      .take(100)
-    db.run(query.result)
-  }
-
-  override def findByFilter(filter: WebEngageUserInfo): Future[Option[User]] = {
-
-    val em = EmailFormatter.format(filter.email)
-
-    val e = em.map(x => s"""'$x'""").getOrElse(s"""null""")
-    val m = filter.mobile_no.map(x => s"""'$x'""").getOrElse(s"""null""")
-    val query = sql"""SELECT * from ptp_fn_find_user(#$e, #$m);"""
-      .as[Option[String]]
-    db.run(query).map(_.map(_.map(r => get(r))).headOption.flatten)
-
-  }
+object UserRepoImpl extends UserRepo with UserTableComponent {
 
   override def find(filter: WebEngageUserInfo): Future[Option[User]] = {
 
@@ -88,18 +36,6 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
 
     val e = em.map(x => s"""'$x'""").getOrElse(s"""null""")
     val m = filter.mobile_no.map(x => s"""'$x'""").getOrElse(s"""null""")
-    val query = sql"""SELECT * from ptp_fn_find_user(#$e, #$m);"""
-      .as[Option[String]]
-    db.run(query).map(_.map(_.map(r => get(r))).headOption.flatten)
-
-  }
-
-  override def findByFilter(mobileNo: Option[String], email: Option[String]): Future[Option[User]] = {
-
-    val em = EmailFormatter.format(email)
-
-    val e = em.map(x => s"""'$x'""").getOrElse(s"""null""")
-    val m = mobileNo.map(x => s"""'$x'""").getOrElse(s"""null""")
     val query = sql"""SELECT * from ptp_fn_find_user(#$e, #$m);"""
       .as[Option[String]]
     db.run(query).map(_.map(_.map(r => get(r))).headOption.flatten)
@@ -133,18 +69,16 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
     val action = userTable
       .filter(_.id === user.id)
       .update(user)
-
     db.run(action).map(_ > 0)
 
   }
 
-  override def isDisabled(userName: String): Future[Boolean] = {
+  def delete(userId: String): Future[Boolean] = {
 
-    val query = userTable
-      .filter(_.userName === userName)
-      .map(_.disabled)
-
-    db.run(query.result.head)
+    val action = userTable
+      .filter(_.userId === userId)
+      .delete
+    db.run(action).map(_ == 1)
 
   }
 
@@ -163,9 +97,9 @@ object WebEngageUserRepoImpl extends WebEngageUserRepo with WebEngageUserTableCo
 
 }
 
-private[repos] trait WebEngageUserTableComponent extends SlickSupport {
+private[repos] trait UserTableComponent extends SlickSupport {
 
-  private[WebEngageUserTableComponent] final class UserTable(tag: Tag)
+  private[UserTableComponent] final class UserTable(tag: Tag)
     extends Table[User](tag, "user") {
 
     def id: Rep[Long] = column[Long]("id", O.AutoInc, O.PrimaryKey)

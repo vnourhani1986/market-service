@@ -6,7 +6,7 @@ import akka.routing.FromConfig
 import akka.util.Timeout
 import com.snapptrip.DI._
 import com.snapptrip.kafka.{Publisher, Subscriber}
-import com.snapptrip.repos.WebEngageUserRepoImpl
+import com.snapptrip.repos.UserRepoImpl
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.ExecutionContext
@@ -22,7 +22,7 @@ class MarketServiceActor(
   val publisherActor: ActorRef = Publisher("webengage")
   private val subscriberActorRef: ActorRef = context.actorOf(SubscriberActor(publisherActor)(system, ex, timeout), "subscriber-actor")
   private val subscriber = Subscriber("test-2088440552", subscriberActorRef)
-  private lazy val dbActorRef: ActorRef = context.actorOf(FromConfig.props(DBActor(WebEngageUserRepoImpl))
+  private lazy val dbActorRef: ActorRef = context.actorOf(FromConfig.props(DBActor(UserRepoImpl))
     .withMailbox("mailbox.db-actor"), s"db-router")
   lazy val clientActorRef: ActorRef = context.actorOf(FromConfig.props(ClientActor(dbActorRef, publisherActor))
     .withMailbox("mailbox.client-actor"), s"client-actor")
