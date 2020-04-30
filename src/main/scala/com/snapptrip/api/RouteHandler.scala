@@ -13,11 +13,9 @@ import com.snapptrip.api.Messages._
 import com.snapptrip.formats.Formats._
 import com.snapptrip.notification.email.EmailService
 import com.snapptrip.notification.sms.SmsService
-import com.snapptrip.utils.EmailAddress
-import com.snapptrip.utils.formatters.MobileNoFormatter.isNumber
-import com.snapptrip.utils.formatters.{EmailFormatter, MobileNoFormatter}
 import com.snapptrip.service.actor.ClientActor.{CheckUser, TrackEvent}
 import com.snapptrip.service.api.WebEngageApi
+import com.snapptrip.utils.formatters.{EmailFormatter, MobileNoFormatter}
 import com.typesafe.scalalogging.LazyLogging
 import spray.json.{JsNumber, JsObject, JsString, JsValue}
 
