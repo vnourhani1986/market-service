@@ -35,6 +35,7 @@ class DBActor[A, F](
         .recover {
           case error =>
             logger.error("save user" + error.getMessage)
+            senderRef ! SaveResult(a, ref, meta)
             Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref))
         }
 
