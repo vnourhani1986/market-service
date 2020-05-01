@@ -2,7 +2,6 @@ package com.snapptrip.models
 
 import java.time.{LocalDate, LocalDateTime}
 
-import com.snapptrip.auth.UserRole
 import com.snapptrip.utils.DateTimeUtils
 
 case class User(

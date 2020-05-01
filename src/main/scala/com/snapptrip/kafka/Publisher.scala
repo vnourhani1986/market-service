@@ -1,34 +1,40 @@
 package com.snapptrip.kafka
 
-import akka.Done
+import akka.actor.ActorRef
 import akka.kafka.ProducerSettings
 import akka.kafka.scaladsl.Producer
-import akka.stream.scaladsl.Source
-import com.snapptrip.formats.Formats._
+import akka.stream.OverflowStrategy
+import akka.stream.scaladsl.{Keep, Source}
 import com.snapptrip.DI._
-import com.snapptrip.kafka.Core._
+import com.snapptrip.formats.Formats._
+import com.snapptrip.kafka.Setting._
 import org.apache.kafka.clients.producer.ProducerRecord
-import spray.json.JsValue
-import spray.json._
+import spray.json.{JsValue, _}
 
-import scala.concurrent.Future
+class Publisher(
+                 bufferSize: Int,
+                 overflowStrategy: OverflowStrategy,
+                 topic: String,
+                 setting: ProducerSettings[String, String]
+               ) {
+
+  def actorRef: ActorRef = Source
+    .actorRef[(Key, JsValue)](bufferSize, overflowStrategy)
+    .map {
+      case (key, value) => new ProducerRecord[String, String](topic, key.toJson.compactPrint, value.toString)
+    }.toMat(Producer.plainSink(setting))(Keep.left)
+    .run()
+
+}
 
 object Publisher {
 
-  val producerSettings: ProducerSettings[String, String] = producerDefaults
+  def apply(topic: String): ActorRef = new Publisher(
+    bufferSize,
+    OverflowStrategy.dropHead,
+    topic,
+    producerDefaults).actorRef
 
-  def publish(key: Key, data: List[JsValue]): Future[Done] = {
-
-    Source
-      .fromIterator(() => data.iterator)
-      .map { hotel =>
-        hotel.toString
-      }
-      .map(value => {
-        new ProducerRecord[String, String](topic, key.toJson.compactPrint, value)
-      })
-      .runWith(Producer.plainSink(producerSettings))
-
-  }
+  val bufferSize = 0
 
 }

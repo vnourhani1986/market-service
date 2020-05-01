@@ -10,7 +10,10 @@ object MobileNoFormatter {
     isLong(str)
   }
 
-  val formats = List(("""[0][9][0-9][0-9]{8,8}""", 1), ("""[0][0][9][8][9][0-9][0-9]{8,8}""", 4), ("""[+][9][8][9][0-9][0-9]{8,8}""", 3))
+  val formats = List(("""[0][9][0-9][0-9]{8,8}""", 1),
+    ("""[9][0-9][0-9]{8,8}""", 0),
+    ("""[0][0][9][8][9][0-9][0-9]{8,8}""", 4),
+    ("""[+][9][8][9][0-9][0-9]{8,8}""", 3))
 
   val mapper = Map(
     ('+', '+'),
@@ -42,10 +45,7 @@ object MobileNoFormatter {
       if (mobile.length == 0) {
         None
       } else {
-        formats.map(x => (mobile.matches(x._1), x)).find(_._1).map(_._2._2).map(m.substring) match {
-          case Some(em) => Some(em)
-          case None => Some(mobile)
-        }
+        formats.map(x => (mobile.matches(x._1), x)).find(_._1).map(_._2._2).map(m.substring)
       }
     }
   }
