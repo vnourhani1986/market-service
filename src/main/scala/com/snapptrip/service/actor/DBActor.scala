@@ -24,21 +24,27 @@ class DBActor[A, F](
       val senderRef = sender()
       repo.find(f).map(r => senderRef ! FindResult(f, r, ref, meta))
         .recover {
-          case error => Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref))
+          case error =>
+            logger.error("find user" + error.getMessage)
+            Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref))
         }
 
     case Save(a: A, ref, meta) =>
       val senderRef = sender()
       repo.save(a).map(r => senderRef ! SaveResult(r, ref, meta))
         .recover {
-          case error => Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref))
+          case error =>
+            logger.error("save user" + error.getMessage)
+            Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref))
         }
 
     case Update(a: A, ref, meta) =>
       val senderRef = sender()
       repo.update(a).map(r => senderRef ! UpdateResult(a, r, ref, meta))
         .recoverWith {
-          case error => Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref))
+          case error =>
+            logger.error("update user" + error.getMessage)
+            Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref))
         }
 
   }
