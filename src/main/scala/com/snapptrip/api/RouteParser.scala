@@ -13,11 +13,10 @@ trait RouteParser extends Validation {
     case _ => None
   }
 
-  def bodyParser[A, B](body: A)(f1: A => B)(f2: B => (Boolean, String))(f4: B => Route): Route = {
-    val nBody = f1(body)
-    val (isValid, message) = f2(nBody)
+  def bodyParser[A, B](body: A)(f1: A => (Boolean, String))(f2: A => B)(f3: B => Route): Route = {
+    val (isValid, message) = f1(body)
     if (isValid) {
-      f4(nBody)
+      f3(f2(body))
     } else {
       val entity = JsObject(
         "status" -> JsString("ERROR"),

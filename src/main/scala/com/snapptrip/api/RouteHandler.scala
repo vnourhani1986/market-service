@@ -149,7 +149,7 @@ class RouteHandler(
               cors.corsHandler {
                 headerValue(extractToken(token)) { _ =>
                   entity(as[WebEngageUserInfo]) { body =>
-                    bodyParser(body)(formatBody)(validateBody) { userInfo =>
+                    bodyParser(body)(validateBody)(formatBody) { userInfo =>
                       onSuccess(marketServiceActor.ask(CheckUser(userInfo)).mapTo[Either[ExtendedException, String]]) {
                         case Right(userId) =>
                           val entity = JsObject(
@@ -176,7 +176,7 @@ class RouteHandler(
           headerValue(extractToken(token)) { _ =>
             post {
               entity(as[WebEngageUserInfo]) { body =>
-                bodyParser(body)(formatBody)(validateBody) { userInfo =>
+                bodyParser(body)(validateBody)(formatBody) { userInfo =>
                   onSuccess(marketServiceActor.ask(CheckUser(userInfo)).mapTo[Either[ExtendedException, String]]) {
                     case Right(userId) =>
                       val entity = JsObject(
@@ -202,7 +202,7 @@ class RouteHandler(
           post {
             headerValue(extractToken(token)) { _ =>
               entity(as[WebEngageEvent]) { body =>
-                bodyParser(body)(formatBody)(validateBody) { event =>
+                bodyParser(body)(validateBody)(formatBody) { event =>
                   onSuccess(marketServiceActor.ask(TrackEvent(event)).mapTo[String]) { _ =>
                     val entity = JsObject(
                       "status" -> JsString("SUCCESS")
@@ -265,8 +265,15 @@ object RouteHandler extends CORSHandler with Converter {
       }
     }
 
-    val isValidMobile = MobileNoFormatter.format(mobileNo).isDefined
-    val isValidEmail = EmailFormatter.format(email).isDefined
+    val isValidMobile: Boolean = mobileNo match {
+      case Some(_) => MobileNoFormatter.format(mobileNo).isDefined
+      case None => true
+    }
+
+    val isValidEmail: Boolean = email match {
+      case Some(_) => EmailFormatter.format(email).isDefined
+      case None => true
+    }
 
     if (!birthDateIsValid) {
       (false, "birth date is not valid")
