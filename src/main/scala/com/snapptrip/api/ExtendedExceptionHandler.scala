@@ -15,11 +15,11 @@ object ExtendedExceptionHandler extends JsonProtocol {
   def handle()(implicit logger: com.typesafe.scalalogging.Logger): ExceptionHandler = {
     ExceptionHandler {
       case t@ExtendedException(content, _, _) =>
-        SentryClient.log(t, None)
+//        SentryClient.log(t, None)
         logger.error(content, t)
         complete(HttpResponse(status = 500, entity = content))
       case error: Throwable =>
-        SentryClient.log(error, None)
+//        SentryClient.log(error, None)
         logger.error(s"Error while handling", error)
         complete("")
     }
