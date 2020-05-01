@@ -15,7 +15,7 @@ object DI {
   implicit val config: Config = ConfigFactory.load()
   implicit val system: ActorSystem = ActorSystem("snapptrip")
   implicit val ec: ExecutionContextExecutor = system.dispatcher //bindAndHandle requires an implicit ExecutionContext
-  implicit val timeout: Timeout = Timeout(30 seconds)
+  implicit val timeout: Timeout = Timeout(60 seconds)
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val timezone: ZoneId = ZoneId.of(config.getString("timezone"))
   implicit val db: Database = com.snapptrip.repos.database.DBManager.db

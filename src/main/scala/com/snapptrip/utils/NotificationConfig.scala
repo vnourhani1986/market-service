@@ -14,5 +14,5 @@ object NotificationConfig {
   val smsUrl = s"""$baseURL$sms"""
   val client: String = config.getString("notification.client")
   val port: Int = config.getInt("notification.port")
-  val clientConnectionSettings: ClientConnectionSettings = ClientConnectionSettings(system).withConnectingTimeout(15.second)
+  val clientConnectionSettings: ClientConnectionSettings = ClientConnectionSettings(system).withConnectingTimeout(30.second)
 }

@@ -105,7 +105,7 @@ class EventActor(
 
 object EventActor extends Converter {
 
-  private implicit val timeout: Timeout = Timeout(30.second)
+  import com.snapptrip.DI.timeout
 
   def apply(dbActor: => ActorRef, kafkaActor: => ActorRef): Props = {
     Props(new EventActor(dbActor, kafkaActor))
