@@ -48,16 +48,12 @@ class UserActor(
       self ! FindUser(user, ref)
 
     case CheckUser(user, ref) =>
-      logger.error(s"""check user from  client -> ${user.toString}""")
       self ! FindUser(user, ref)
 
     case FindUser(user, ref) =>
-      logger.error(s"""find user to db -> ${user.toString}""")
       dbRouter ! Find(user, ref)
 
     case DBActor.FindResult(newUser: WebEngageUserInfo, oldUserOpt: Option[User], ref, _) =>
-      logger.error(s"""find result from db-> ${newUser.toString}""")
-      logger.error(s"""find result from db-> ${oldUserOpt.toString}""")
       oldUserOpt match {
         case userOpt: Some[User] =>
           val user = converter(newUser, userOpt)
@@ -70,7 +66,6 @@ class UserActor(
 
     case DBActor.UpdateResult(user: User, updated, ref, _) =>
       val result = if (updated) {
-        logger.error(s"""update result from db-> ${user.toString}""")
         val birthDate = user.birthDate.map(b => dateTimeFormatter(
           b, DateTimeFormatter.ISO_LOCAL_DATE_TIME, Some(WebEngageConfig.timeOffset)) match {
           case Right(value) => value
@@ -78,7 +73,6 @@ class UserActor(
         })
         val wUser = converter(user, birthDate)
         self ! SendToKafka(Key(wUser.userId, "track-user"), wUser.toJson)
-        logger.error(s"""update result from db- wUser -> ${wUser.toString}""")
         Right(wUser.userId)
       } else {
         Left(ExtendedException("can not update user data in database", ErrorCodes.DatabaseQueryError))

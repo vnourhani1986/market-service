@@ -33,9 +33,6 @@ object WebEngageApi extends LazyLogging {
 
   def trackEvent(request: JsValue): Future[(StatusCode, JsValue)] = {
 
-    logger.error(WebEngageConfig.host)
-    logger.error(WebEngageConfig.eventsUrl)
-    logger.error(WebEngageConfig.apiKey)
     for {
       body <- Marshal(request).to[RequestEntity]
       request = HttpRequest(HttpMethods.POST, WebEngageConfig.eventsUrl)

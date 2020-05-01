@@ -45,11 +45,9 @@ class ClientActor(
   override def receive(): Receive = {
 
     case RegisterUser(user) =>
-      logger.error(user.toString)
       userActorRef ! UserActor.RegisterUser(user, sender())
 
     case CheckUser(user) =>
-      logger.error(user.toString)
       userActorRef ! UserActor.RegisterUser(user, sender())
 
     case RegisterUserResult(result, ref) =>
@@ -57,7 +55,6 @@ class ClientActor(
       ref ! result
 
     case CheckUserResult(result, ref) =>
-      logger.error(s"""check result from user actor -> ${result.toString}""")
       ref ! result
 
     case TrackEvent(event) =>

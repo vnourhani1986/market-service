@@ -22,7 +22,6 @@ class DBActor[A, F](
 
     case Find(f: F, ref, meta) =>
       val senderRef = sender()
-      logger.error(f.toString)
       repo.find(f).map(r => senderRef ! FindResult(f, r, ref, meta))
         .recover {
           case error => Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref))
@@ -30,7 +29,6 @@ class DBActor[A, F](
 
     case Save(a: A, ref, meta) =>
       val senderRef = sender()
-      logger.error("111111111111111111")
       repo.save(a).map(r => senderRef ! SaveResult(r, ref, meta))
         .recover {
           case error => Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref))

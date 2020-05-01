@@ -1,5 +1,6 @@
 package com.snapptrip.service.actor
 
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 import akka.actor.SupervisorStrategy.Resume
@@ -12,8 +13,10 @@ import com.snapptrip.models.User
 import com.snapptrip.service.Converter
 import com.snapptrip.service.actor.DBActor.{Find, Save, Update}
 import com.snapptrip.utils.Exceptions.{ErrorCodes, ExtendedException}
+import com.snapptrip.utils.WebEngageConfig
 import com.typesafe.scalalogging.LazyLogging
 import spray.json._
+import com.snapptrip.formats.Formats._
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -61,15 +64,19 @@ class EventActor(
       }
 
     case DBActor.UpdateResult(user: User, updated, ref, eventOpt: Option[JsValue]) =>
-      logger.error(s"""update result from db-> $eventOpt""")
       if (updated) {
         val event = eventOpt.get
         val (userId, modifiedEvent) = modifyEvent(user.userId, event) match {
-          case Right(value) =>
-            logger.error(s"""update result modify event-> $value""")
-            value
+          case Right(value) => value
           case Left(exception) => throw ExtendedException(exception.getMessage, ErrorCodes.JsonParseError, ref)
         }
+        val birthDate = user.birthDate.map(b => dateTimeFormatter(
+          b, DateTimeFormatter.ISO_LOCAL_DATE_TIME, Some(WebEngageConfig.timeOffset)) match {
+          case Right(value) => value
+          case Left(exception) => throw ExtendedException(exception.getMessage, ErrorCodes.TimeFormatError, ref)
+        })
+        val wUser = converter(user, birthDate)
+        self ! SendToKafka(Key(userId, "track-user"), wUser.toJson)
         self ! SendToKafka(Key(userId, "track-event"), modifiedEvent)
       }
 
@@ -79,6 +86,13 @@ class EventActor(
         case Right(value) => value
         case Left(exception) => throw ExtendedException(exception.getMessage, ErrorCodes.JsonParseError, ref)
       }
+      val birthDate = user.birthDate.map(b => dateTimeFormatter(
+        b, DateTimeFormatter.ISO_LOCAL_DATE_TIME, Some(WebEngageConfig.timeOffset)) match {
+        case Right(value) => value
+        case Left(exception) => throw ExtendedException(exception.getMessage, ErrorCodes.TimeFormatError, ref)
+      })
+      val wUser = converter(user, birthDate)
+      self ! SendToKafka(Key(userId, "track-user"), wUser.toJson)
       self ! SendToKafka(Key(userId, "track-event"), modifiedEvent)
 
     case SendToKafka(key, value) =>

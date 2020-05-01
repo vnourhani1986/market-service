@@ -32,11 +32,9 @@ class WebEngageActor(
 
     case SendUserInfo(user, retryCount) =>
 
-      logger.error(s"send user info $user")
       WebEngageApi.trackUser(user.toJson)
         .map {
           case (status, _) if status == StatusCodes.Created =>
-            logger.error(s"send user info Created")
             self ! PoisonPill
 
           case (status, entity) if status == StatusCodes.BadRequest =>
@@ -73,17 +71,17 @@ class WebEngageActor(
             self ! PoisonPill
 
           case (status, entity) if status == StatusCodes.BadRequest =>
-            logger.error(s"bad request")
+            logger.error(s"bad request $entity")
             errorPublisherActor ! (Key(userId, "track-event"), entity)
             throw ExtendedException("bad request to webengage", ErrorCodes.BadRequestError)
 
           case (status, entity) if status == StatusCodes.Unauthorized =>
-            logger.error(s"un auth")
+            logger.error(s"un auth $entity")
             errorPublisherActor ! (Key(userId, "track-event"), entity)
             throw ExtendedException("webengage authentication fail", ErrorCodes.AuthenticationError)
 
           case (status, entity) if status == StatusCodes.NotFound =>
-            logger.error(s"not found")
+            logger.error(s"not found $entity")
             errorPublisherActor ! (Key(userId, "track-event"), entity)
             throw ExtendedException("route not found", ErrorCodes.InvalidURL)
 
