@@ -62,12 +62,10 @@ class WebEngageActor(
 
     case SendEventInfo(userId, event, retryCount) =>
 
-      logger.error(s"send event info $userId, $event")
       WebEngageApi.trackEvent(event)
         .map {
 
           case (status, _) if status == StatusCodes.Created =>
-            logger.error(s"send event Created")
             self ! PoisonPill
 
           case (status, entity) if status == StatusCodes.BadRequest =>
