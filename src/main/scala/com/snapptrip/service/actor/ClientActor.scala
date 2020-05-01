@@ -51,7 +51,6 @@ class ClientActor(
       userActorRef ! UserActor.RegisterUser(user, sender())
 
     case RegisterUserResult(result, ref) =>
-      logger.error(result.toString)
       ref ! result
 
     case CheckUserResult(result, ref) =>

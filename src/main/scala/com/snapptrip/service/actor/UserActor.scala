@@ -66,14 +66,14 @@ class UserActor(
 
     case DBActor.UpdateResult(user: User, updated, ref, _) =>
       val result = if (updated) {
-        val birthDate = user.birthDate.map(b => dateTimeFormatter(
-          b, DateTimeFormatter.ISO_LOCAL_DATE_TIME, Some(WebEngageConfig.timeOffset)) match {
-          case Right(value) => value
-          case Left(exception) =>
-            logger.error("update user fail" + user.toString)
-            throw ExtendedException(exception.getMessage, ErrorCodes.TimeFormatError, ref)
-        })
-        val wUser = converter(user, birthDate)
+//        val birthDate = user.birthDate.map(b => dateTimeFormatter(
+//          b, DateTimeFormatter.ISO_LOCAL_DATE_TIME, Some(WebEngageConfig.timeOffset)) match {
+//          case Right(value) => value
+//          case Left(exception) =>
+//            logger.error("update user fail" + user.toString)
+//            throw ExtendedException(exception.getMessage, ErrorCodes.TimeFormatError, ref)
+//        })
+        val wUser = converter(user, None)
         self ! SendToKafka(Key(wUser.userId, "track-user"), wUser.toJson)
         Right(wUser.userId)
       } else {
@@ -82,14 +82,14 @@ class UserActor(
       clientActor ! CheckUserResult(result, ref)
 
     case DBActor.SaveResult(user: User, ref, _) =>
-      val birthDate = user.birthDate.map(b => dateTimeFormatter(
-        b, DateTimeFormatter.ISO_LOCAL_DATE_TIME, Some(WebEngageConfig.timeOffset)) match {
-        case Right(value) => value
-        case Left(exception) =>
-          logger.error("save user fail" + user.toString)
-          throw ExtendedException(exception.getMessage, ErrorCodes.TimeFormatError, ref)
-      })
-      val wUser = converter(user, birthDate)
+//      val birthDate = user.birthDate.map(b => dateTimeFormatter(
+//        b, DateTimeFormatter.ISO_LOCAL_DATE_TIME, Some(WebEngageConfig.timeOffset)) match {
+//        case Right(value) => value
+//        case Left(exception) =>
+//          logger.error("save user fail" + user.toString)
+//          throw ExtendedException(exception.getMessage, ErrorCodes.TimeFormatError, ref)
+//      })
+      val wUser = converter(user, None)
       self ! SendToKafka(Key(wUser.userId, "track-user"), wUser.toJson)
       clientActor ! CheckUserResult(Right(wUser.userId), ref)
 
