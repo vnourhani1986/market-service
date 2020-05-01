@@ -22,6 +22,7 @@ import scala.concurrent.duration._
 
 class UserActor(
                  dbRouter: => ActorRef,
+                 clientActor: ActorRef,
                  publisherActor: => ActorRef
                )(
                  implicit timeout: Timeout
@@ -47,12 +48,16 @@ class UserActor(
       self ! FindUser(user, ref)
 
     case CheckUser(user, ref) =>
+      logger.error(s"""check user from  client -> ${user.toString}""")
       self ! FindUser(user, ref)
 
     case FindUser(user, ref) =>
+      logger.error(s"""find user to db -> ${user.toString}""")
       dbRouter ! Find(user, ref)
 
     case DBActor.FindResult(newUser: WebEngageUserInfo, oldUserOpt: Option[User], ref, _) =>
+      logger.error(s"""find result from db-> ${newUser.toString}""")
+      logger.error(s"""find result from db-> ${oldUserOpt.toString}""")
       oldUserOpt match {
         case userOpt: Some[User] =>
           val user = converter(newUser, userOpt)
@@ -65,6 +70,7 @@ class UserActor(
 
     case DBActor.UpdateResult(user: User, updated, ref, _) =>
       val result = if (updated) {
+        logger.error(s"""update result from db-> ${user.toString}""")
         val birthDate = user.birthDate.map(b => dateTimeFormatter(
           b, DateTimeFormatter.ISO_LOCAL_DATE_TIME, Some(WebEngageConfig.timeOffset)) match {
           case Right(value) => value
@@ -72,11 +78,12 @@ class UserActor(
         })
         val wUser = converter(user, birthDate)
         self ! SendToKafka(Key(wUser.userId, "track-user"), wUser.toJson)
+        logger.error(s"""update result from db- wUser -> ${wUser.toString}""")
         Right(wUser.userId)
       } else {
         Left(ExtendedException("can not update user data in database", ErrorCodes.DatabaseQueryError))
       }
-      context.parent ! CheckUserResult(result, ref)
+      clientActor ! CheckUserResult(result, ref)
 
     case DBActor.SaveResult(user: User, ref, _) =>
       val birthDate = user.birthDate.map(b => dateTimeFormatter(
@@ -86,7 +93,7 @@ class UserActor(
       })
       val wUser = converter(user, birthDate)
       self ! SendToKafka(Key(wUser.userId, "track-user"), wUser.toJson)
-      context.parent ! CheckUserResult(Right(wUser.userId), ref)
+      clientActor ! CheckUserResult(Right(wUser.userId), ref)
 
     case SendToKafka(key, value) =>
       publisherActor ! (key, value)
@@ -99,8 +106,8 @@ object UserActor {
 
   private implicit val timeout: Timeout = Timeout(30.second)
 
-  def apply(dbActor: => ActorRef, kafkaActor: => ActorRef): Props = {
-    Props(new UserActor(dbActor, kafkaActor))
+  def apply(dbActor: => ActorRef, clientActor: => ActorRef, kafkaActor: => ActorRef): Props = {
+    Props(new UserActor(dbActor, clientActor, kafkaActor))
   }
 
   case class RegisterUser(userInfo: WebEngageUserInfo, ref: ActorRef) extends Message

@@ -5,6 +5,7 @@ import akka.dispatch.{ControlMessage, PriorityGenerator, UnboundedStablePriority
 import com.snapptrip.repos.Repo
 import com.snapptrip.utils.Exceptions.{ErrorCodes, ExtendedException}
 import com.typesafe.config.Config
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -12,7 +13,8 @@ class DBActor[A, F](
                      repo: Repo[A, F]
                    )(
                      implicit ex: ExecutionContext
-                   ) extends Actor {
+                   ) extends Actor
+  with LazyLogging {
 
   import DBActor._
 
@@ -20,6 +22,7 @@ class DBActor[A, F](
 
     case Find(f: F, ref, meta) =>
       val senderRef = sender()
+      logger.error(f.toString)
       repo.find(f).map(r => senderRef ! FindResult(f, r, ref, meta))
         .recover {
           case error => Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref))
@@ -27,6 +30,7 @@ class DBActor[A, F](
 
     case Save(a: A, ref, meta) =>
       val senderRef = sender()
+      logger.error("111111111111111111")
       repo.save(a).map(r => senderRef ! SaveResult(r, ref, meta))
         .recover {
           case error => Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref))

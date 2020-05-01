@@ -27,6 +27,7 @@ class UserActorSpec extends TestKit(ActorSystem("test-system"))
     "register user " in {
 
       val endProb = TestProbe()
+      val clientProb = TestProbe()
       val publisherProb = TestProbe()
 
       val user = User(
@@ -74,7 +75,7 @@ class UserActorSpec extends TestKit(ActorSystem("test-system"))
 
       val testActor = system.actorOf(Props(new Actor {
 
-        val userActor: ActorRef = context.actorOf(UserActor(dbActor, publisherProb.ref))
+        val userActor: ActorRef = context.actorOf(UserActor(dbActor, clientProb.ref, publisherProb.ref))
 
         override def receive: Receive = {
           case message: CheckUserResult => endProb.ref ! message
@@ -90,6 +91,7 @@ class UserActorSpec extends TestKit(ActorSystem("test-system"))
     "check user " in {
 
       val endProb = TestProbe()
+      val clientProb = TestProbe()
       val publisherProb = TestProbe()
 
       val user = User(
@@ -137,7 +139,7 @@ class UserActorSpec extends TestKit(ActorSystem("test-system"))
 
       val testActor = system.actorOf(Props(new Actor {
 
-        val userActor: ActorRef = context.actorOf(UserActor(dbActor, publisherProb.ref))
+        val userActor: ActorRef = context.actorOf(UserActor(dbActor, clientProb.ref, publisherProb.ref))
 
         override def receive: Receive = {
           case message: CheckUserResult => endProb.ref ! message

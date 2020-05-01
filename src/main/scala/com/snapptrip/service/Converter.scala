@@ -75,20 +75,18 @@ trait Converter extends LazyLogging {
   def modifyEvent(userId: String, event: JsValue, timeFormat: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME,
                   timeOffset: String = WebEngageConfig.timeOffset): Either[Throwable, (String, JsObject)] = {
     Try {
-      val eventTime = event.asJsObject.fields.filterKeys(_ == "event").values.flatMap {
-        _.asJsObject.fields.filterKeys(_ == "eventTime").toList.flatMap(x =>
-          JsObject(x._1 -> JsString(x._2.compactPrint.replace(s""""""", ""))).fields.toList)
-      }.toList.map { js =>
+      val eventTime = event.asJsObject.fields.filterKeys(_ == "eventTime").toList.flatMap{x =>
+          JsObject(x._1 -> JsString(x._2.compactPrint.replace(s""""""", ""))).fields.toList
+      }.map { js =>
         dateTimeFormatter(js._2.compactPrint.replace(s""""""", ""), timeFormat, Some(timeOffset)) match {
           case Right(value) => (js._1, JsString(value))
           case Left(exception: Exception) => throw exception
         }
       }
-      val jsUserId = JsObject("userId" -> JsString(userId)).fields.toList.head
-      val jsEvent = event.asJsObject.fields.filterKeys(_ == "event").values.flatMap { x =>
-        eventTime ::: x.asJsObject.fields.filterKeys(_ != "eventTime").toList
-      }
-      val content = JsObject(jsUserId, "event" -> JsObject(jsEvent.toMap))
+      val jsUserId = JsObject("userId" -> JsString(userId)).fields.toList
+      val jsEvent = jsUserId ::: eventTime ::: event.asJsObject.fields.filterKeys(_ != "eventTime").toList
+
+      val content = JsObject(jsEvent.toMap)
       (userId, content)
     }.toEither
   }

@@ -5,7 +5,9 @@ import akka.actor.{Actor, ActorInitializationException, ActorKilledException, Ac
 import akka.routing.FromConfig
 import akka.util.Timeout
 import com.snapptrip.DI._
+import com.snapptrip.api.Messages.WebEngageUserInfo
 import com.snapptrip.kafka.{Publisher, Setting, Subscriber}
+import com.snapptrip.models.User
 import com.snapptrip.repos.UserRepoImpl
 import com.snapptrip.service.actor.ClientActor.CheckUserResult
 import com.snapptrip.utils.Exceptions.{ErrorCodes, ExtendedException}
@@ -26,9 +28,9 @@ class MarketServiceActor(
   private val subscriberActorRef: ActorRef = context.actorOf(
     SubscriberActor(publisherActor, errorPublisherActor)(system, ex, timeout), "subscriber-actor")
   private val subscriber = Subscriber(Setting.topic, subscriberActorRef)
-  private lazy val dbActorRef: ActorRef = context.actorOf(FromConfig.props(DBActor(UserRepoImpl))
+  private val dbActorRef: ActorRef = context.actorOf(FromConfig.props(DBActor[User, WebEngageUserInfo](UserRepoImpl))
     .withMailbox("mailbox.db-actor"), s"db-router")
-  lazy val clientActorRef: ActorRef = context.actorOf(FromConfig.props(ClientActor(dbActorRef, publisherActor))
+  lazy val clientActorRef: ActorRef = context.actorOf(ClientActor(dbActorRef, publisherActor)
     .withMailbox("mailbox.client-actor"), s"client-actor")
 
   override def preStart(): Unit = {

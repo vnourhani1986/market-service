@@ -61,10 +61,13 @@ class EventActor(
       }
 
     case DBActor.UpdateResult(user: User, updated, ref, eventOpt: Option[JsValue]) =>
+      logger.error(s"""update result from db-> $eventOpt""")
       if (updated) {
         val event = eventOpt.get
         val (userId, modifiedEvent) = modifyEvent(user.userId, event) match {
-          case Right(value) => value
+          case Right(value) =>
+            logger.error(s"""update result modify event-> $value""")
+            value
           case Left(exception) => throw ExtendedException(exception.getMessage, ErrorCodes.JsonParseError, ref)
         }
         self ! SendToKafka(Key(userId, "track-event"), modifiedEvent)

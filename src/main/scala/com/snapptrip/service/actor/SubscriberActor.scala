@@ -59,13 +59,13 @@ class SubscriberActor(
         if (context.child(s"webengage-actor-$userId").isDefined) {
           context.child(s"webengage-actor-$userId").foreach(_ ! SendUserInfo(user.get, 1))
         } else {
-          context.actorOf(WebEngageActor(publisherActor, errorPublisherActor).withMailbox("mailbox.webengage-actor"), s"webengage-actor-$userId") ! SendUserInfo(user.get, 1)
+          context.actorOf(WebEngageActor(publisherActor, errorPublisherActor), s"webengage-actor-$userId") ! SendUserInfo(user.get, 1)
         }
       } else if (keyType == "track-event") {
         if (context.child(s"webengage-actor-$userId").isDefined) {
           context.child(s"webengage-actor-$userId").foreach(_ ! SendEventInfo(userId, event.get, 1))
         } else {
-          context.actorOf(WebEngageActor(publisherActor, errorPublisherActor).withMailbox("mailbox.webengage-actor"), s"webengage-actor-$userId") ! SendEventInfo(userId, event.get, 1)
+          context.actorOf(WebEngageActor(publisherActor, errorPublisherActor), s"webengage-actor-$userId") ! SendEventInfo(userId, event.get, 1)
         }
       }
 

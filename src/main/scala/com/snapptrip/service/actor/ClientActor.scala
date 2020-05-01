@@ -22,7 +22,7 @@ class ClientActor(
 
   import ClientActor._
 
-  lazy val userActorRef: ActorRef = context.actorOf(FromConfig.props(UserActor(dbRouter, publisherActor)), s"user-router")
+  lazy val userActorRef: ActorRef = context.actorOf(FromConfig.props(UserActor(dbRouter, self, publisherActor)), s"user-router")
   lazy val eventActorRef: ActorRef = context.actorOf(FromConfig.props(EventActor(dbRouter, publisherActor)), s"event-router")
 
   override def preStart(): Unit = {
@@ -45,15 +45,19 @@ class ClientActor(
   override def receive(): Receive = {
 
     case RegisterUser(user) =>
+      logger.error(user.toString)
       userActorRef ! UserActor.RegisterUser(user, sender())
 
     case CheckUser(user) =>
+      logger.error(user.toString)
       userActorRef ! UserActor.RegisterUser(user, sender())
 
     case RegisterUserResult(result, ref) =>
+      logger.error(result.toString)
       ref ! result
 
     case CheckUserResult(result, ref) =>
+      logger.error(s"""check result from user actor -> ${result.toString}""")
       ref ! result
 
     case TrackEvent(event) =>

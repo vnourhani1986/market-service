@@ -13,7 +13,7 @@ import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import spray.json._
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{FiniteDuration, _}
 
 class WebEngageActor(
@@ -32,9 +32,11 @@ class WebEngageActor(
 
     case SendUserInfo(user, retryCount) =>
 
+      logger.error(s"send user info $user")
       WebEngageApi.trackUser(user.toJson)
         .map {
           case (status, _) if status == StatusCodes.Created =>
+            logger.error(s"send user info Created")
             self ! PoisonPill
 
           case (status, entity) if status == StatusCodes.BadRequest =>
@@ -50,10 +52,10 @@ class WebEngageActor(
             throw ExtendedException("route not found", ErrorCodes.InvalidURL)
 
         }.recover {
+        case error: ExtendedException => Future.failed(error)
         case error =>
           if (retryCount < retryMax) {
-            val rt = retryCount + 1
-            retry(user, (retryCount * retryStep).second, rt)
+            retry(user, (retryCount * retryStep).second, retryCount + 1)
           } else {
             errorPublisherActor ! (Key(user.userId, "track-user"), JsString(error.getMessage))
             throw ExtendedException(error.getMessage, ErrorCodes.RestServiceError)
@@ -62,29 +64,34 @@ class WebEngageActor(
 
     case SendEventInfo(userId, event, retryCount) =>
 
+      logger.error(s"send event info $userId, $event")
       WebEngageApi.trackEvent(event)
         .map {
 
           case (status, _) if status == StatusCodes.Created =>
+            logger.error(s"send event Created")
             self ! PoisonPill
 
           case (status, entity) if status == StatusCodes.BadRequest =>
+            logger.error(s"bad request")
             errorPublisherActor ! (Key(userId, "track-event"), entity)
             throw ExtendedException("bad request to webengage", ErrorCodes.BadRequestError)
 
           case (status, entity) if status == StatusCodes.Unauthorized =>
+            logger.error(s"un auth")
             errorPublisherActor ! (Key(userId, "track-event"), entity)
             throw ExtendedException("webengage authentication fail", ErrorCodes.AuthenticationError)
 
           case (status, entity) if status == StatusCodes.NotFound =>
+            logger.error(s"not found")
             errorPublisherActor ! (Key(userId, "track-event"), entity)
             throw ExtendedException("route not found", ErrorCodes.InvalidURL)
 
         }.recover {
+        case error: ExtendedException => Future.failed(error)
         case error =>
           if (retryCount < retryMax) {
-            val rt = retryCount + 1
-            retry(userId, event, (retryCount * retryStep).second, rt)
+            retry(userId, event, (retryCount * retryStep).second, retryCount + 1)
           } else {
             errorPublisherActor ! (Key(userId, "track-event"), JsString(error.getMessage))
             throw ExtendedException(error.getMessage, ErrorCodes.RestServiceError)
