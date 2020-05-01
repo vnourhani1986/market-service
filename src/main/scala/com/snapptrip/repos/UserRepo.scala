@@ -9,7 +9,6 @@ import com.snapptrip.formats.Formats._
 import com.snapptrip.models.{User, UserDBFormat}
 import com.snapptrip.utils.PostgresProfiler.api._
 import com.snapptrip.utils.formatters.EmailFormatter
-import com.typesafe.scalalogging.LazyLogging
 import slick.lifted.ProvenShape
 import spray.json.JsonParser
 
@@ -29,7 +28,7 @@ trait UserRepo extends Repo[User, WebEngageUserInfo] {
 
 }
 
-object UserRepoImpl extends UserRepo with UserTableComponent with LazyLogging {
+object UserRepoImpl extends UserRepo with UserTableComponent {
 
   override def find(filter: WebEngageUserInfo): Future[Option[User]] = {
 
@@ -84,13 +83,13 @@ object UserRepoImpl extends UserRepo with UserTableComponent with LazyLogging {
   }
 
   def get(result: String): User = {
-    logger.error("database find result" + result)
+
     val u = JsonParser(result).convertTo[UserDBFormat]
     User(u.id, u.user_name, u.user_id,
-      u.created_at.map(x => LocalDateTime.parse(x, DateTimeFormatter.ISO_LOCAL_DATE_TIME)),
-      u.modified_at.map(x => LocalDateTime.parse(x, DateTimeFormatter.ISO_LOCAL_DATE_TIME)),
+      None, //u.created_at.map(x => LocalDateTime.parse(x, DateTimeFormatter.ISO_LOCAL_DATE_TIME)),
+      None, //u.modified_at.map(x => LocalDateTime.parse(x, DateTimeFormatter.ISO_LOCAL_DATE_TIME)),
       u.name, u.family, u.email, u.origin_email, u.mobile_no,
-      u.birth_date.map(x => LocalDate.parse(x, DateTimeFormatter.ISO_LOCAL_DATE)),
+      None, //u.birth_date.map(x => LocalDate.parse(x, DateTimeFormatter.ISO_LOCAL_DATE)),
       u.gender, u.provider, u.disabled, u.deleted
     )
 
