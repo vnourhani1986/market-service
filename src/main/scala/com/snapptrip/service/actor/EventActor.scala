@@ -83,36 +83,6 @@ class EventActor(
 
   }
 
-  //    def trackEventWithoutUserId(request: WebEngageEvent): Future[(Boolean, JsObject)] = {
-  //
-  //      val user = request.user
-  //      val event = request.event
-  //      (for {
-  //        _ <- if (user.email.isEmpty && user.mobile_no.isEmpty) {
-  //          Future.failed(new Exception("must define one of email or mobile number"))
-  //        } else {
-  //          Future.successful("")
-  //        }
-  //        provider = event.asJsObject.fields.filterKeys(_ == "eventData").headOption.flatMap(_._2.asJsObject.fields.filterKeys(_ == "provider").headOption).map(_._2.compactPrint.replace(s""""""", ""))
-  //        (userId, newRequest) <- userCheck(WebEngageUserInfo(mobile_no = user.mobile_no, email = user.email, provider = provider)).map { response =>
-  //          val (body, _) = response
-  //          val lContent = JsObject("userId" -> JsString(body.userId)).fields.toList :::
-  //            event.asJsObject.fields.filterKeys(_ == "eventTime").toList.flatMap(x => JsObject(x._1 -> JsString(x._2.compactPrint.replace(s""""""", "").concat(WebEngageConfig.timeOffset))).fields.toList) :::
-  //            event.asJsObject.fields.filterKeys(x => x != "email" && x != "mobile_no" && x != "eventTime").toList
-  //          val jContent = JsObject(lContent.toMap)
-  //          (body.userId, jContent)
-  //        }
-  //      } yield {
-  //        self ! SendToKafka(Key(userId, "track-event"), List(newRequest))
-  //        (true, JsObject("status" -> JsString("success")))
-  //      }).recover {
-  //        case error: Throwable =>
-  //          logger.info(s"""client actor track event with error : ${error.getMessage}""")
-  //          (false, JsObject("status" -> JsString("failed"), "error" -> JsString(error.getMessage)))
-  //      }
-  //
-  //    }
-
 }
 
 

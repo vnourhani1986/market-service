@@ -93,46 +93,6 @@ class UserActor(
 
   }
 
-  //  def userCheck(request: WebEngageUserInfo): Future[(WebEngageUserInfoWithUserId, Int)] = {
-  //
-  //    (for {
-  //      oldUser <- WebEngageUserRepoImpl.findByFilter(request)
-  //      user <- if (oldUser.isDefined) {
-  //        val webEngageUser = converter(request, oldUser)
-  //        WebEngageUserRepoImpl.update(webEngageUser).map {
-  //          case true =>
-  //            val birthDate = Try {
-  //              webEngageUser.birthDate.map(_.atStartOfDay().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss" + WebEngageConfig.timeOffset)))
-  //            }.toOption.flatten
-  //            Right((converter(webEngageUser, birthDate), StatusCodes.OK.intValue))
-  //          case false =>
-  //            Left(new Exception("can not update user data in database"))
-  //        }
-  //      } else {
-  //        val webEngageUser = converter(request)
-  //        WebEngageUserRepoImpl.save(webEngageUser).map { user =>
-  //          val birthDate = Try {
-  //            user.birthDate.map(_.atStartOfDay().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss" + WebEngageConfig.timeOffset)))
-  //          }.toOption.flatten
-  //          Right((converter(webEngageUser, birthDate), StatusCodes.Created.intValue))
-  //        }
-  //      }
-  //      fUser <- user match {
-  //        case Right(u) => Future.successful(u)
-  //        case Left(e) => Future.failed(e)
-  //      }
-  //    } yield {
-  //      self ! SendToKafka(Key(fUser._1.userId, "track-user"), List(fUser._1.toJson))
-  //      fUser
-  //    }).recover {
-  //      case error: Throwable =>
-  //        logger.info(s"""client actor check user with error : ${error.getMessage}""")
-  //        (WebEngageUserInfoWithUserId(userId = error.getMessage), StatusCodes.InternalServerError.intValue)
-  //    }
-  //
-  //  }
-
-
 }
 
 object UserActor {

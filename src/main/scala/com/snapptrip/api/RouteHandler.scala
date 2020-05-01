@@ -18,6 +18,7 @@ import com.snapptrip.notification.sms.SmsService
 import com.snapptrip.service.Converter
 import com.snapptrip.service.actor.ClientActor.{CheckUser, TrackEvent}
 import com.snapptrip.service.api.WebEngageApi
+import com.snapptrip.utils.Exceptions.ExtendedException
 import com.snapptrip.utils.formatters.{EmailFormatter, MobileNoFormatter}
 import com.typesafe.scalalogging.LazyLogging
 import spray.json.{JsNumber, JsObject, JsString, JsValue}
@@ -132,7 +133,7 @@ class RouteHandler(
                       "status" -> JsString("ERROR"),
                       "statusCode" -> JsNumber(9999), // unknown error
                       "message" -> JsString("server_error")
-                    ).toString
+                    ).compactPrint
                     complete(HttpResponse(status = status).withEntity(entity))
                 }
               }
@@ -149,22 +150,21 @@ class RouteHandler(
                 headerValue(extractToken(token)) { _ =>
                   entity(as[WebEngageUserInfo]) { body =>
                     bodyParser(body)(formatBody)(validateBody) { userInfo =>
-                      onSuccess(marketServiceActor.ask(CheckUser(userInfo)).mapTo[(WebEngageUserInfoWithUserId, Int)]) {
-                        case (user, status) if status == StatusCodes.OK.intValue || status == StatusCodes.Created.intValue =>
+                      onSuccess(marketServiceActor.ask(CheckUser(userInfo)).mapTo[Either[ExtendedException, String]]) {
+                        case Right(userId) =>
                           val entity = JsObject(
                             "status" -> JsString("SUCCESS"),
-                            "user_id" -> JsString(user.userId)
-                          ).toString
+                            "user_id" -> JsString(userId)
+                          ).compactPrint
                           val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
-                          complete(HttpResponse(status = status).withEntity(httpEntity))
-                        case (user, status) =>
-                          logger.info(s"""post check user : $userInfo response by result: server error and status: ${user.userId}""")
+                          complete(HttpResponse(status = StatusCodes.Created).withEntity(httpEntity))
+                        case Left(ex) =>
                           val entity = JsObject(
                             "status" -> JsString("ERROR"),
-                            "error" -> JsString(user.userId)
-                          ).toString
+                            "error" -> JsString(ex.message)
+                          ).compactPrint
                           val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
-                          complete(HttpResponse(status = status).withEntity(httpEntity))
+                          complete(HttpResponse(status = StatusCodes.InternalServerError).withEntity(httpEntity))
                       }
                     }
                   }
@@ -177,20 +177,21 @@ class RouteHandler(
             post {
               entity(as[WebEngageUserInfo]) { body =>
                 bodyParser(body)(formatBody)(validateBody) { userInfo =>
-                  onSuccess(marketServiceActor.ask(CheckUser(userInfo)).mapTo[(WebEngageUserInfoWithUserId, Int)]) {
-                    case (_, status) if status == StatusCodes.OK.intValue || status == StatusCodes.Created.intValue =>
+                  onSuccess(marketServiceActor.ask(CheckUser(userInfo)).mapTo[Either[ExtendedException, String]]) {
+                    case Right(userId) =>
                       val entity = JsObject(
-                        "status" -> JsString("SUCCESS")
-                      ).toString
+                        "status" -> JsString("SUCCESS"),
+                        "user_id" -> JsString(userId)
+                      ).compactPrint
                       val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
-                      complete(HttpResponse(status = status).withEntity(httpEntity))
-                    case (_, status) =>
-                      logger.info(s"""post register user : $userInfo response by result: server error and status: ${StatusCodes.InternalServerError.intValue}""")
+                      complete(HttpResponse(status = StatusCodes.Created).withEntity(httpEntity))
+                    case Left(ex) =>
                       val entity = JsObject(
-                        "status" -> JsString("ERROR")
-                      ).toString
+                        "status" -> JsString("ERROR"),
+                        "error" -> JsString(ex.message)
+                      ).compactPrint
                       val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
-                      complete(HttpResponse(status = status).withEntity(httpEntity))
+                      complete(HttpResponse(status = StatusCodes.InternalServerError).withEntity(httpEntity))
                   }
                 }
               }
@@ -202,14 +203,12 @@ class RouteHandler(
             headerValue(extractToken(token)) { _ =>
               entity(as[WebEngageEvent]) { body =>
                 bodyParser(body)(formatBody)(validateBody) { event =>
-                  onSuccess(marketServiceActor.ask(TrackEvent(event)).mapTo[(Boolean, JsObject)]) {
-                    case (status, entity) if status =>
-                      val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
-                      complete(HttpResponse(status = StatusCodes.Created).withEntity(httpEntity))
-                    case (status, entity) if !status =>
-                      logger.info(s"""post event : $event response by result: server error and status: $status""")
-                      val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
-                      complete(HttpResponse(status = StatusCodes.InternalServerError).withEntity(httpEntity))
+                  onSuccess(marketServiceActor.ask(TrackEvent(event)).mapTo[String]) { _ =>
+                    val entity = JsObject(
+                      "status" -> JsString("SUCCESS")
+                    ).compactPrint
+                    val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
+                    complete(HttpResponse(status = StatusCodes.Created).withEntity(httpEntity))
                   }
                 }
               }
