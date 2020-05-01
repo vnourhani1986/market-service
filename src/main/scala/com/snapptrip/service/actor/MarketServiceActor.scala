@@ -42,6 +42,7 @@ class MarketServiceActor(
       case _: ActorInitializationException => Stop
       case _: ActorKilledException => Stop
       case ex: ExtendedException if ex.errorCode == ErrorCodes.DatabaseError =>
+        logger.error("super strategy" + ex.getMessage)
         if (ex.ref != null) clientActorRef ! CheckUserResult(Left(ex), ex.ref)
         Resume
       case ex: ExtendedException if ex.errorCode == ErrorCodes.AuthenticationError => Stop
