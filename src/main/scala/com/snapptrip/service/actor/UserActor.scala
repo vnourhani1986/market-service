@@ -54,7 +54,6 @@ class UserActor(
       dbRouter ! Find(user, ref)
 
     case DBActor.FindResult(newUser: WebEngageUserInfo, oldUserOpt: Option[User], ref, _) =>
-      logger.error("find result" + oldUserOpt.toString)
       oldUserOpt match {
         case userOpt: Some[User] =>
           val user = converter(newUser, userOpt)
@@ -66,7 +65,6 @@ class UserActor(
       }
 
     case DBActor.UpdateResult(user: User, updated, ref, _) =>
-      logger.error("update result" + user.toString)
       val result = if (updated) {
         val birthDate = user.birthDate.map(b => dateTimeFormatter(
           b, DateTimeFormatter.ISO_LOCAL_DATE_TIME, Some(WebEngageConfig.timeOffset)) match {
@@ -82,7 +80,6 @@ class UserActor(
       clientActor ! CheckUserResult(result, ref)
 
     case DBActor.SaveResult(user: User, ref, _) =>
-      logger.error("save result" + user.toString)
       val birthDate = user.birthDate.map(b => dateTimeFormatter(
         b, DateTimeFormatter.ISO_LOCAL_DATE_TIME, Some(WebEngageConfig.timeOffset)) match {
         case Right(value) => value

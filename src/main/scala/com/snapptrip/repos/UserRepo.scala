@@ -38,7 +38,10 @@ object UserRepoImpl extends UserRepo with UserTableComponent {
     val m = filter.mobile_no.map(x => s"""'$x'""").getOrElse(s"""null""")
     val query = sql"""SELECT * from ptp_fn_find_user(#$e, #$m);"""
       .as[Option[String]]
-    db.run(query).map(_.map(_.map(r => get(r))).headOption.flatten)
+    db.run(query).map(_.map(_.map(r => get(r))).headOption.flatten).map {q =>
+      if (q.isEmpty) println(s"""database return empty $filter""")
+      q
+    }
 
   }
 
@@ -86,10 +89,10 @@ object UserRepoImpl extends UserRepo with UserTableComponent {
 
     val u = JsonParser(result).convertTo[UserDBFormat]
     User(u.id, u.user_name, u.user_id,
-      None, //u.created_at.map(x => LocalDateTime.parse(x, DateTimeFormatter.ISO_LOCAL_DATE_TIME)),
-      None, //u.modified_at.map(x => LocalDateTime.parse(x, DateTimeFormatter.ISO_LOCAL_DATE_TIME)),
+      u.created_at.map(x => LocalDateTime.parse(x, DateTimeFormatter.ISO_LOCAL_DATE_TIME)),
+      u.modified_at.map(x => LocalDateTime.parse(x, DateTimeFormatter.ISO_LOCAL_DATE_TIME)),
       u.name, u.family, u.email, u.origin_email, u.mobile_no,
-      None, //u.birth_date.map(x => LocalDate.parse(x, DateTimeFormatter.ISO_LOCAL_DATE)),
+      u.birth_date.map(x => LocalDate.parse(x, DateTimeFormatter.ISO_LOCAL_DATE)),
       u.gender, u.provider, u.disabled, u.deleted
     )
 
