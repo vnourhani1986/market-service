@@ -39,8 +39,7 @@ class DBActor[A, F](
             repo.find(f).map{
               case Some(r) => senderRef ! SaveResult(r, ref, meta)
               case None => senderRef ! SaveResult(a, ref, meta, fail = true)
-            }
-            Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref))
+            }.flatMap(_ => Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref)))
         }
 
     case Update(a: A, ref, meta) =>

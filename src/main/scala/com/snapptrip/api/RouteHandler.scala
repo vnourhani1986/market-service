@@ -57,10 +57,8 @@ class RouteHandler(
                   val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
                   complete(HttpResponse(status = status).withEntity(httpEntity))
                 case (status, _) if status == StatusCodes.InternalServerError =>
-                  logger.info(s"""post user: $body response by result: server error and status: $status""")
                   complete(HttpResponse(status = status))
                 case (status, entity) =>
-                  logger.info(s"""post user: $body response by result: $entity and status: $status""")
                   val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
                   complete(HttpResponse(status = status).withEntity(httpEntity))
               }
@@ -80,7 +78,6 @@ class RouteHandler(
                     val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
                     complete(HttpResponse(status = status).withEntity(httpEntity))
                   case status if status == StatusCodes.InternalServerError =>
-                    logger.info(s"""post email : $body response by result: server error and status: $status""")
                     val entity = JsObject(
                       "status" -> JsString("sms_rejected"),
                       "statusCode" -> JsNumber(9988), // unknown error
@@ -89,7 +86,6 @@ class RouteHandler(
                     val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
                     complete(HttpResponse(status = StatusCodes.OK).withEntity(httpEntity))
                   case status =>
-                    logger.info(s"""post email : $body response by status: $status""")
                     val entity = JsObject(
                       "status" -> JsString("sms_rejected"),
                       "statusCode" -> JsNumber(9988), // unknown error
@@ -119,7 +115,6 @@ class RouteHandler(
                     val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
                     complete(HttpResponse(status = status).withEntity(httpEntity))
                   case status if status == StatusCodes.InternalServerError =>
-                    logger.info(s"""post email : $body response by result: server error and status: $status""")
                     val entity = JsObject(
                       "status" -> JsString("ERROR"),
                       "statusCode" -> JsNumber(9999), // unknown error
@@ -128,7 +123,6 @@ class RouteHandler(
                     val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
                     complete(HttpResponse(status = StatusCodes.OK).withEntity(httpEntity))
                   case status =>
-                    logger.info(s"""post email : $body response by status: $status""")
                     val entity = JsObject(
                       "status" -> JsString("ERROR"),
                       "statusCode" -> JsNumber(9999), // unknown error
