@@ -42,5 +42,20 @@ class ConverterSpec extends FlatSpec with Matchers with Converter {
     dateTimeFormatter(date, DateTimeFormatter.ISO_LOCAL_DATE_TIME, Some("+0430")) shouldBe Right("2020-01-01T00:00:00+0430")
 
   }
+  "get provider" should "find provider from json value" in {
+
+    val event =
+      s"""{
+            "eventName":"Fulfilled",
+            "eventTime":"2020-03-10T12:18:32",
+            "eventData":{
+              "familyName":"test",
+              "provider": "hotel"
+            }
+          }""".stripMargin.parseJson
+
+    getProvider(event) shouldBe Some("hotel")
+
+  }
 
 }

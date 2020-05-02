@@ -46,7 +46,7 @@ class DBActorSpec extends TestKit(ActorSystem("test-system"))
 
       val actor = system.actorOf(DBActor(repo), s"""db-actor-${Random.nextInt}""")
 
-      actor ! Save(A(), testActor)
+      actor ! Save(F(), A(), testActor)
       expectMsg(SaveResult(A(), testActor))
 
     }
@@ -77,7 +77,7 @@ class DBActorSpec extends TestKit(ActorSystem("test-system"))
       val actor = system.actorOf(DBActor(repo).withDispatcher("mailbox.db-actor"), s"""db-actor""")
 
       actor ! Find(F(), testActor)
-      actor ! Save(A(), testActor)
+      actor ! Save(F(), A(), testActor)
       actor ! Find(F(), testActor)
       actor ! Find(F(), testActor)
       actor ! Update(A(), testActor)

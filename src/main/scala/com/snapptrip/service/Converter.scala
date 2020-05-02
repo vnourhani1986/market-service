@@ -75,8 +75,8 @@ trait Converter extends LazyLogging {
   def modifyEvent(userId: String, event: JsValue, timeFormat: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME,
                   timeOffset: String = WebEngageConfig.timeOffset): Either[Throwable, (String, JsObject)] = {
     Try {
-      val eventTime = event.asJsObject.fields.filterKeys(_ == "eventTime").toList.flatMap{x =>
-          JsObject(x._1 -> JsString(x._2.compactPrint.replace(s""""""", ""))).fields.toList
+      val eventTime = event.asJsObject.fields.filterKeys(_ == "eventTime").toList.flatMap { x =>
+        JsObject(x._1 -> JsString(x._2.compactPrint.replace(s""""""", ""))).fields.toList
       }.map { js =>
         dateTimeFormatter(js._2.compactPrint.replace(s""""""", ""), timeFormat, Some(timeOffset)) match {
           case Right(value) => (js._1, JsString(value))
@@ -89,6 +89,12 @@ trait Converter extends LazyLogging {
       val content = JsObject(jsEvent.toMap)
       (userId, content)
     }.toEither
+  }
+
+  def getProvider(json: JsValue): Option[String] = {
+    json.asJsObject.fields.filterKeys(_ == "eventData").toList.flatMap { x =>
+      x._2.asJsObject.fields.filterKeys(_ == "provider")
+    }.headOption.map(_._2.compactPrint.replace(s""""""", ""))
   }
 
 }

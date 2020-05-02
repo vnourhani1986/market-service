@@ -83,7 +83,7 @@ class EventActorSpec extends TestKit(ActorSystem("test-system"))
       val dbActor: ActorRef = system.actorOf(Props(new Actor {
         override def receive: Receive = {
           case Find(userInfo: WebEngageUserInfo, ref, meta) => sender() ! FindResult(userInfo, Some(user), ref, meta)
-          case Save(user: User, ref, meta) => sender() ! SaveResult(user, ref, meta)
+          case Save(userInfo: WebEngageUserInfo, user: User, ref, meta) => sender() ! SaveResult(user, ref, meta)
           case Update(user: User, ref, meta) => sender() ! UpdateResult(user, updated = true, ref, meta)
         }
       }),

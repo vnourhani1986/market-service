@@ -50,7 +50,7 @@ class EventActor(
       self ! FindUser(eventInfo.user, eventInfo.event, ref)
 
     case FindUser(user, event, ref) =>
-      dbRouter ! Find(WebEngageUserInfo(mobile_no = user.mobile_no, email = user.email), ref, Some(event))
+      dbRouter ! Find(WebEngageUserInfo(mobile_no = user.mobile_no, email = user.email, provider = getProvider(event)), ref, Some(event))
 
     case DBActor.FindResult(newUser: WebEngageUserInfo, oldUserOpt: Option[User], ref, eventOpt: Option[JsValue]) =>
       oldUserOpt match {
