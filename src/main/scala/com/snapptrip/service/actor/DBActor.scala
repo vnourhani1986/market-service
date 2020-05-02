@@ -29,13 +29,16 @@ class DBActor[A, F](
             Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref))
         }
 
-    case Save(a: A, ref, meta) =>
+    case Save(f: F, a: A, ref, meta) =>
       val senderRef = sender()
       repo.save(a).map(r => senderRef ! SaveResult(r, ref, meta))
-        .recover {
+        .recoverWith {
           case error =>
             logger.error("save user" + error.getMessage)
-            senderRef ! SaveResult(a, ref, meta)
+            repo.find(f).map{
+              case Some(r) => senderRef ! SaveResult(r, ref, meta)
+              case None => senderRef ! SaveResult(a, ref, meta, fail = true)
+            }
             Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref))
         }
 
@@ -60,13 +63,13 @@ object DBActor {
 
   case class Find[F, M](f: F, ref: ActorRef, meta: Option[M] = None) extends Message
 
-  case class Save[A, M](user: A, ref: ActorRef, meta: Option[M] = None) extends Message with ControlMessage
+  case class Save[F, A, M](f: F, user: A, ref: ActorRef, meta: Option[M] = None) extends Message
 
-  case class Update[A, M](user: A, ref: ActorRef, meta: Option[M] = None) extends Message with ControlMessage
+  case class Update[A, M](user: A, ref: ActorRef, meta: Option[M] = None) extends Message
 
   case class FindResult[A, F, M](filter: F, user: Option[A], ref: ActorRef, meta: Option[M] = None) extends Message
 
-  case class SaveResult[A, M](a: A, ref: ActorRef, meta: Option[M] = None) extends Message
+  case class SaveResult[A, M](a: A, ref: ActorRef, meta: Option[M] = None, fail: Boolean = false) extends Message
 
   case class UpdateResult[A, M](a: A, updated: Boolean, ref: ActorRef, meta: Option[M] = None) extends Message
 
@@ -76,7 +79,7 @@ object DBActor {
                ) extends UnboundedStablePriorityMailbox(
     PriorityGenerator {
       case _: Find[_, _] => 1
-      case _: Save[_, _] => 0
+      case _: Save[_, _, _] => 0
       case _: Update[_, _] => 0
       case _: PoisonPill => 3
       case _ => 2

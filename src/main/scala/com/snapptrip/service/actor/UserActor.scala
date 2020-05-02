@@ -61,7 +61,7 @@ class UserActor(
         case None =>
           val newUserId = UUID.randomUUID().toString
           val user = converter(newUser, newUserId)
-          dbRouter ! Save(user, ref)
+          dbRouter ! Save(newUser, user, ref)
       }
 
     case DBActor.UpdateResult(user: User, updated, ref, _) =>
@@ -79,15 +79,20 @@ class UserActor(
       }
       clientActor ! CheckUserResult(result, ref)
 
-    case DBActor.SaveResult(user: User, ref, _) =>
-      val birthDate = user.birthDate.map(b => dateTimeFormatter(
-        b, DateTimeFormatter.ISO_LOCAL_DATE_TIME, Some(WebEngageConfig.timeOffset)) match {
-        case Right(value) => value
-        case Left(exception) => throw ExtendedException(exception.getMessage, ErrorCodes.TimeFormatError, ref)
-      })
-      val wUser = converter(user, birthDate)
-      self ! SendToKafka(Key(wUser.userId, "track-user"), wUser.toJson)
-      clientActor ! CheckUserResult(Right(wUser.userId), ref)
+    case DBActor.SaveResult(user: User, ref, _, fail) =>
+      if(fail) {
+        clientActor ! CheckUserResult(Left(ExtendedException("can not save user data in database",
+          ErrorCodes.DatabaseQueryError)), ref)
+      } else {
+        val birthDate = user.birthDate.map(b => dateTimeFormatter(
+          b, DateTimeFormatter.ISO_LOCAL_DATE_TIME, Some(WebEngageConfig.timeOffset)) match {
+          case Right(value) => value
+          case Left(exception) => throw ExtendedException(exception.getMessage, ErrorCodes.TimeFormatError, ref)
+        })
+        val wUser = converter(user, birthDate)
+        self ! SendToKafka(Key(wUser.userId, "track-user"), wUser.toJson)
+        clientActor ! CheckUserResult(Right(wUser.userId), ref)
+      }
 
     case SendToKafka(key, value) =>
       publisherActor ! (key, value)

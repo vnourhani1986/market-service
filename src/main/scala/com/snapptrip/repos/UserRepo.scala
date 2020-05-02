@@ -18,7 +18,7 @@ trait UserRepo extends Repo[User, WebEngageUserInfo] {
 
   def find(filter: WebEngageUserInfo): Future[Option[User]]
 
-  def find(mobileNo: Option[String], email: Option[String]): Future[Seq[User]]
+  def find(mobileNo: Option[String], email: Option[String]): Future[Option[User]]
 
   def save(user: User): Future[User]
 
@@ -32,9 +32,7 @@ object UserRepoImpl extends UserRepo with UserTableComponent {
 
   override def find(filter: WebEngageUserInfo): Future[Option[User]] = {
 
-    val em = EmailFormatter.format(filter.email)
-
-    val e = em.map(x => s"""'$x'""").getOrElse(s"""null""")
+    val e = filter.email.map(x => s"""'$x'""").getOrElse(s"""null""")
     val m = filter.mobile_no.map(x => s"""'$x'""").getOrElse(s"""null""")
     val query = sql"""SELECT * from ptp_fn_find_user(#$e, #$m);"""
       .as[Option[String]]
@@ -45,17 +43,16 @@ object UserRepoImpl extends UserRepo with UserTableComponent {
 
   }
 
-  override def find(mobileNo: Option[String], email: Option[String]): Future[Seq[User]] = {
+  override def find(mobileNo: Option[String], email: Option[String]): Future[Option[User]] = {
 
-    val em = EmailFormatter.format(email)
-
-    val e = em.map(x => s"""'$x'""").getOrElse(s"""null""")
+    val e = email.map(x => s"""'$x'""").getOrElse(s"""null""")
     val m = mobileNo.map(x => s"""'$x'""").getOrElse(s"""null""")
     val query = sql"""SELECT * from ptp_fn_find_user(#$e, #$m);"""
-      .as[String]
-    db.run(query).map(res => {
-      res.map { r => get(r) }
-    })
+      .as[Option[String]]
+    db.run(query).map(_.map(_.map(r => get(r))).headOption.flatten).map {q =>
+      if (q.isEmpty) println(s"""database return empty $mobileNo $email """)
+      q
+    }
 
   }
 
