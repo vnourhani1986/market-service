@@ -17,6 +17,7 @@ import com.snapptrip.utils.WebEngageConfig
 import com.typesafe.scalalogging.LazyLogging
 import spray.json._
 import com.snapptrip.formats.Formats._
+import com.snapptrip.service.actor.ClientActor.CheckUserResult
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -52,15 +53,19 @@ class EventActor(
     case FindUser(user, event, ref) =>
       dbRouter ! Find(WebEngageUserInfo(mobile_no = user.mobile_no, email = user.email, provider = getProvider(event)), ref, Some(event))
 
-    case DBActor.FindResult(newUser: WebEngageUserInfo, oldUserOpt: Option[User], ref, eventOpt: Option[JsValue]) =>
-      oldUserOpt match {
-        case userOpt: Some[User] =>
-          val user = converter(newUser, userOpt)
-          dbRouter ! Update(user, ref, eventOpt)
-        case None =>
-          val newUserId = UUID.randomUUID().toString
-          val user = converter(newUser, newUserId)
-          dbRouter ! Save(newUser, user, ref, eventOpt)
+    case DBActor.FindResult(newUser: WebEngageUserInfo, oldUserOpt: Option[User], ref, eventOpt: Option[JsValue], fail) =>
+      if(fail) {
+
+      } else {
+        oldUserOpt match {
+          case userOpt: Some[User] =>
+            val user = converter(newUser, userOpt)
+            dbRouter ! Update(user, ref, eventOpt)
+          case None =>
+            val newUserId = UUID.randomUUID().toString
+            val user = converter(newUser, newUserId)
+            dbRouter ! Save(newUser, user, ref, eventOpt)
+        }
       }
 
     case DBActor.UpdateResult(user: User, updated, ref, eventOpt: Option[JsValue]) =>

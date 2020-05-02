@@ -53,15 +53,20 @@ class UserActor(
     case FindUser(user, ref) =>
       dbRouter ! Find(user, ref)
 
-    case DBActor.FindResult(newUser: WebEngageUserInfo, oldUserOpt: Option[User], ref, _) =>
-      oldUserOpt match {
-        case userOpt: Some[User] =>
-          val user = converter(newUser, userOpt)
-          dbRouter ! Update(user, ref)
-        case None =>
-          val newUserId = UUID.randomUUID().toString
-          val user = converter(newUser, newUserId)
-          dbRouter ! Save(newUser, user, ref)
+    case DBActor.FindResult(newUser: WebEngageUserInfo, oldUserOpt: Option[User], ref, _, fail) =>
+      if(fail) {
+        clientActor ! CheckUserResult(Left(ExtendedException("can not find user data in database",
+          ErrorCodes.DatabaseQueryError)), ref)
+      } else {
+        oldUserOpt match {
+          case userOpt: Some[User] =>
+            val user = converter(newUser, userOpt)
+            dbRouter ! Update(user, ref)
+          case None =>
+            val newUserId = UUID.randomUUID().toString
+            val user = converter(newUser, newUserId)
+            dbRouter ! Save(newUser, user, ref)
+        }
       }
 
     case DBActor.UpdateResult(user: User, updated, ref, _) =>

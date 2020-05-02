@@ -26,6 +26,7 @@ class DBActor[A, F](
         .recover {
           case error =>
             logger.error("find user" + error.getMessage)
+            senderRef ! FindResult(f, None, ref, meta, fail = true)
             Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref))
         }
 
@@ -48,6 +49,7 @@ class DBActor[A, F](
         .recoverWith {
           case error =>
             logger.error("update user" + error.getMessage)
+            senderRef ! UpdateResult(a, updated = false, ref, meta)
             Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref))
         }
 
@@ -67,7 +69,7 @@ object DBActor {
 
   case class Update[A, M](user: A, ref: ActorRef, meta: Option[M] = None) extends Message
 
-  case class FindResult[A, F, M](filter: F, user: Option[A], ref: ActorRef, meta: Option[M] = None) extends Message
+  case class FindResult[A, F, M](filter: F, user: Option[A], ref: ActorRef, meta: Option[M] = None, fail: Boolean = false) extends Message
 
   case class SaveResult[A, M](a: A, ref: ActorRef, meta: Option[M] = None, fail: Boolean = false) extends Message
 
