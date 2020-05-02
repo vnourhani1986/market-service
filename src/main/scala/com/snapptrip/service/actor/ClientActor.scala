@@ -33,12 +33,8 @@ class ClientActor(
     OneForOneStrategy(10, 60 seconds, loggingEnabled = true) {
       case _: ActorInitializationException => Stop
       case _: ActorKilledException => Stop
-      case ex: ExtendedException if ex.errorCode == ErrorCodes.TimeFormatError =>
-        if (ex.ref != null) self ! CheckUserResult(Left(ex), ex.ref)
-        Resume
-      case ex: ExtendedException if ex.errorCode == ErrorCodes.JsonParseError =>
-        if (ex.ref != null) self ! CheckUserResult(Left(ex), ex.ref)
-        Resume
+      case ex: ExtendedException if ex.errorCode == ErrorCodes.TimeFormatError => Resume
+      case ex: ExtendedException if ex.errorCode == ErrorCodes.JsonParseError => Resume
       case _: Throwable => Restart
     }
 
