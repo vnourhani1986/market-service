@@ -60,7 +60,7 @@ class EventActor(
         case None =>
           val newUserId = UUID.randomUUID().toString
           val user = converter(newUser, newUserId)
-          dbRouter ! Save(user, ref, eventOpt)
+          dbRouter ! Save(newUser, user, ref, eventOpt)
       }
 
     case DBActor.UpdateResult(user: User, updated, ref, eventOpt: Option[JsValue]) =>
@@ -80,21 +80,24 @@ class EventActor(
         self ! SendToKafka(Key(userId, "track-event"), modifiedEvent)
       }
 
-    case DBActor.SaveResult(user: User, ref, eventOpt: Option[JsValue]) =>
-      val event = eventOpt.get
-      val (userId, modifiedEvent) = modifyEvent(user.userId, event) match {
-        case Right(value) => value
-        case Left(exception) => throw ExtendedException(exception.getMessage, ErrorCodes.JsonParseError, ref)
-      }
-      val birthDate = user.birthDate.map(b => dateTimeFormatter(
-        b, DateTimeFormatter.ISO_LOCAL_DATE_TIME, Some(WebEngageConfig.timeOffset)) match {
-        case Right(value) => value
-        case Left(exception) => throw ExtendedException(exception.getMessage, ErrorCodes.TimeFormatError, ref)
-      })
-      val wUser = converter(user, birthDate)
-      self ! SendToKafka(Key(userId, "track-user"), wUser.toJson)
-      self ! SendToKafka(Key(userId, "track-event"), modifiedEvent)
+    case DBActor.SaveResult(user: User, ref, eventOpt: Option[JsValue], fail) =>
+      if (fail) {
 
+      } else {
+        val event = eventOpt.get
+        val (userId, modifiedEvent) = modifyEvent(user.userId, event) match {
+          case Right(value) => value
+          case Left(exception) => throw ExtendedException(exception.getMessage, ErrorCodes.JsonParseError, ref)
+        }
+        val birthDate = user.birthDate.map(b => dateTimeFormatter(
+          b, DateTimeFormatter.ISO_LOCAL_DATE_TIME, Some(WebEngageConfig.timeOffset)) match {
+          case Right(value) => value
+          case Left(exception) => throw ExtendedException(exception.getMessage, ErrorCodes.TimeFormatError, ref)
+        })
+        val wUser = converter(user, birthDate)
+        self ! SendToKafka(Key(userId, "track-user"), wUser.toJson)
+        self ! SendToKafka(Key(userId, "track-event"), modifiedEvent)
+      }
     case SendToKafka(key, value) =>
       publisherActor ! (key, value)
 
