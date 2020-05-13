@@ -51,8 +51,6 @@ build_beta:
     only:
        - beta
        - /review-.+$/
-    tags:
-       - docker
 
 
 build_master:
@@ -83,8 +81,6 @@ deploy_beta:
         url: http://b2c.ptp
     only:
         - beta
-    tags:
-        - docker
 deploy_master_pars:
     stage: deploy
     retry: 2
@@ -152,5 +148,3 @@ test_stage:
   script:
     - sbt clean coverage test coverageReport
     - sbt -Dsonar.projectName=$CI_PRIJECT_NAME -Dsonar.branch.name=$CI_COMMIT_REF_NAME sonarScan
-  tags:
-      - docker
