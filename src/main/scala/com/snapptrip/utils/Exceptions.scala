@@ -20,6 +20,7 @@ object Exceptions {
     val JsonParseError = 4011
     val TimeFormatError = 4012
     val DatabaseQueryError = 5012
+    val InternalSeverError = 5000
   }
 
   case class HttpError(result: String, errorCode: Option[Int], message: String)

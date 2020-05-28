@@ -18,7 +18,7 @@ import com.snapptrip.notification.sms.SmsService
 import com.snapptrip.service.Converter
 import com.snapptrip.service.actor.ClientActor.{CheckUser, TrackEvent}
 import com.snapptrip.service.api.WebEngageApi
-import com.snapptrip.utils.Exceptions.ExtendedException
+import com.snapptrip.utils.Exceptions.{ErrorCodes, ExtendedException}
 import com.snapptrip.utils.formatters.{EmailFormatter, MobileNoFormatter}
 import com.typesafe.scalalogging.LazyLogging
 import spray.json.{JsNumber, JsObject, JsString, JsValue}
@@ -144,7 +144,11 @@ class RouteHandler(
                 headerValue(extractToken(token)) { _ =>
                   entity(as[WebEngageUserInfo]) { body =>
                     bodyParser(body)(validateBody)(formatBody) { userInfo =>
-                      onSuccess(marketServiceActor.ask(CheckUser(userInfo)).mapTo[Either[ExtendedException, String]]) {
+                      onSuccess(marketServiceActor.ask(CheckUser(userInfo)).mapTo[Either[ExtendedException, String]]
+                        .recover {
+                          case error =>
+                            Left(ExtendedException(error.getMessage, ErrorCodes.InternalSeverError))
+                        }) {
                         case Right(userId) =>
                           val entity = JsObject(
                             "status" -> JsString("SUCCESS"),
@@ -171,7 +175,11 @@ class RouteHandler(
             post {
               entity(as[WebEngageUserInfo]) { body =>
                 bodyParser(body)(validateBody)(formatBody) { userInfo =>
-                  onSuccess(marketServiceActor.ask(CheckUser(userInfo)).mapTo[Either[ExtendedException, String]]) {
+                  onSuccess(marketServiceActor.ask(CheckUser(userInfo)).mapTo[Either[ExtendedException, String]]
+                    .recover {
+                      case error =>
+                        Left(ExtendedException(error.getMessage, ErrorCodes.InternalSeverError))
+                    }) {
                     case Right(userId) =>
                       val entity = JsObject(
                         "status" -> JsString("SUCCESS"),
