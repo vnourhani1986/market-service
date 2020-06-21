@@ -20,35 +20,35 @@ class DBActor[A, F](
 
   override def receive(): Receive = {
 
-    case Find(f: F, ref, meta) =>
+    case Find(f: F, ref, meta, command) =>
       val senderRef = sender()
-      repo.find(f).map(r => senderRef ! FindResult(f, r, ref, meta))
+      repo.find(f).map(r => senderRef ! FindResult(f, r, ref, meta, command = command))
         .recover {
           case error =>
             logger.error("find user" + error.getMessage)
-            senderRef ! FindResult(f, None, ref, meta, fail = true)
+            senderRef ! FindResult(f, None, ref, meta, fail = true, command = command)
             Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref))
         }
 
-    case Save(f: F, a: A, ref, meta) =>
+    case Save(f: F, a: A, ref, meta, command) =>
       val senderRef = sender()
-      repo.save(a).map(r => senderRef ! SaveResult(r, ref, meta))
+      repo.save(a).map(r => senderRef ! SaveResult(r, ref, meta, command = command))
         .recoverWith {
           case error =>
             logger.error("save user" + error.getMessage)
             repo.find(f).map{
-              case Some(r) => senderRef ! SaveResult(r, ref, meta)
-              case None => senderRef ! SaveResult(a, ref, meta, fail = true)
+              case Some(r) => senderRef ! SaveResult(r, ref, meta, command = command)
+              case None => senderRef ! SaveResult(a, ref, meta, fail = true, command)
             }.flatMap(_ => Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref)))
         }
 
-    case Update(a: A, ref, meta) =>
+    case Update(a: A, ref, meta, command) =>
       val senderRef = sender()
-      repo.update(a).map(r => senderRef ! UpdateResult(a, r, ref, meta))
+      repo.update(a).map(r => senderRef ! UpdateResult(a, r, ref, meta, command = command))
         .recoverWith {
           case error =>
             logger.error("update user" + error.getMessage)
-            senderRef ! UpdateResult(a, updated = false, ref, meta)
+            senderRef ! UpdateResult(a, updated = false, ref, meta, command = command)
             Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref))
         }
 
@@ -62,17 +62,17 @@ object DBActor {
     Props(new DBActor[A, F](repo))
   }
 
-  case class Find[F, M](f: F, ref: ActorRef, meta: Option[M] = None) extends Message
+  case class Find[F, M](f: F, ref: ActorRef, meta: Option[M] = None, command: Command = createCommand("check")) extends Message
 
-  case class Save[F, A, M](f: F, user: A, ref: ActorRef, meta: Option[M] = None) extends Message
+  case class Save[F, A, M](f: F, user: A, ref: ActorRef, meta: Option[M] = None, command: Command = createCommand("check")) extends Message
 
-  case class Update[A, M](user: A, ref: ActorRef, meta: Option[M] = None) extends Message
+  case class Update[A, M](user: A, ref: ActorRef, meta: Option[M] = None, command: Command = createCommand("check")) extends Message
 
-  case class FindResult[A, F, M](filter: F, user: Option[A], ref: ActorRef, meta: Option[M] = None, fail: Boolean = false) extends Message
+  case class FindResult[A, F, M](filter: F, user: Option[A], ref: ActorRef, meta: Option[M] = None, fail: Boolean = false, command: Command = createCommand("check")) extends Message
 
-  case class SaveResult[A, M](a: A, ref: ActorRef, meta: Option[M] = None, fail: Boolean = false) extends Message
+  case class SaveResult[A, M](a: A, ref: ActorRef, meta: Option[M] = None, fail: Boolean = false, command: Command = createCommand("check")) extends Message
 
-  case class UpdateResult[A, M](a: A, updated: Boolean, ref: ActorRef, meta: Option[M] = None) extends Message
+  case class UpdateResult[A, M](a: A, updated: Boolean, ref: ActorRef, meta: Option[M] = None, command: Command = createCommand("check")) extends Message
 
   class Mailbox(
                  setting: ActorSystem.Settings,

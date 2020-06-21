@@ -16,7 +16,7 @@ import com.snapptrip.formats.Formats._
 import com.snapptrip.notification.email.EmailService
 import com.snapptrip.notification.sms.SmsService
 import com.snapptrip.service.Converter
-import com.snapptrip.service.actor.ClientActor.{CheckUser, TrackEvent}
+import com.snapptrip.service.actor.ClientActor.{CheckUser, LoginUser, RegisterUser, TrackEvent}
 import com.snapptrip.service.api.WebEngageApi
 import com.snapptrip.utils.Exceptions.{ErrorCodes, ExtendedException}
 import com.snapptrip.utils.formatters.{EmailFormatter, MobileNoFormatter}
@@ -155,14 +155,14 @@ class RouteHandler(
                             "user_id" -> JsString(userId)
                           ).compactPrint
                           val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
-                          complete(HttpResponse(status = StatusCodes.Created).withEntity(httpEntity))
+                          complete(HttpResponse(status = StatusCodes.OK).withEntity(httpEntity))
                         case Left(ex) =>
                           val entity = JsObject(
                             "status" -> JsString("ERROR"),
                             "error" -> JsString(ex.message)
                           ).compactPrint
                           val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
-                          complete(HttpResponse(status = StatusCodes.InternalServerError).withEntity(httpEntity))
+                          complete(HttpResponse(status = unSuccessResponseHttpStatusCodeGen(ex)).withEntity(httpEntity))
                       }
                     }
                   }
@@ -175,7 +175,7 @@ class RouteHandler(
             post {
               entity(as[WebEngageUserInfo]) { body =>
                 bodyParser(body)(validateBody)(formatBody) { userInfo =>
-                  onSuccess(marketServiceActor.ask(CheckUser(userInfo)).mapTo[Either[ExtendedException, String]]
+                  onSuccess(marketServiceActor.ask(RegisterUser(userInfo)).mapTo[Either[ExtendedException, String]]
                     .recover {
                       case error =>
                         Left(ExtendedException(error.getMessage, ErrorCodes.InternalSeverError))
@@ -193,12 +193,48 @@ class RouteHandler(
                         "error" -> JsString(ex.message)
                       ).compactPrint
                       val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
-                      complete(HttpResponse(status = StatusCodes.InternalServerError).withEntity(httpEntity))
+                      complete(HttpResponse(status = unSuccessResponseHttpStatusCodeGen(ex)).withEntity(httpEntity))
                   }
                 }
               }
             }
           }
+        } ~
+        path("user" / "login") {
+          //Necessary to let the browser make OPTIONS requests as it likes to do
+          options {
+            cors.corsHandler(complete(StatusCodes.OK))
+          } ~
+            post {
+              cors.corsHandler {
+                headerValue(extractToken(token)) { _ =>
+                  entity(as[WebEngageUserInfo]) { body =>
+                    bodyParser(body)(validateBody)(formatBody) { userInfo =>
+                      onSuccess(marketServiceActor.ask(LoginUser(userInfo)).mapTo[Either[ExtendedException, String]]
+                        .recover {
+                          case error =>
+                            Left(ExtendedException(error.getMessage, ErrorCodes.InternalSeverError))
+                        }) {
+                        case Right(userId) =>
+                          val entity = JsObject(
+                            "status" -> JsString("SUCCESS"),
+                            "user_id" -> JsString(userId)
+                          ).compactPrint
+                          val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
+                          complete(HttpResponse(status = StatusCodes.OK).withEntity(httpEntity))
+                        case Left(ex) =>
+                          val entity = JsObject(
+                            "status" -> JsString("ERROR"),
+                            "error" -> JsString(ex.message)
+                          ).compactPrint
+                          val httpEntity = HttpEntity(ContentTypes.`application/json`, entity)
+                          complete(HttpResponse(status = unSuccessResponseHttpStatusCodeGen(ex)).withEntity(httpEntity))
+                      }
+                    }
+                  }
+                }
+              }
+            }
         } ~
         path("events") {
           post {
@@ -292,6 +328,11 @@ object RouteHandler extends CORSHandler with Converter {
       (false, "invalid mobile number")
     }
     else (true, "")
+  }
+
+  def unSuccessResponseHttpStatusCodeGen: PartialFunction[ExtendedException, StatusCode] = {
+    case ExtendedException(_, errorCode, _) if errorCode / 1000 == 4 => StatusCodes.BadRequest
+    case ExtendedException(_, errorCode, _) if errorCode / 1000 == 5 => StatusCodes.InternalServerError
   }
 
 }

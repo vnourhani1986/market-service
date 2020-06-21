@@ -13,6 +13,8 @@ resolvers ++= Seq(
 
 )
 
+scalacOptions += "-Ypartial-unification"
+
 libraryDependencies ++= {
   val akkaVersion       = "2.5.13"
   val akkaHttpVersion   = "10.1.3"
@@ -76,7 +78,10 @@ libraryDependencies ++= {
     "com.github.sbahmani"         % "jalcal"                % "1.4",
 
     // kafka
-    "com.typesafe.akka"           %% "akka-stream-kafka"    % "1.0-RC1"
+    "com.typesafe.akka"           %% "akka-stream-kafka"    % "1.0-RC1",
+
+    // cats
+    "org.typelevel"               %% "cats-core"            % "2.0.0"
 
   )
 }

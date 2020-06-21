@@ -36,10 +36,7 @@ object UserRepoImpl extends UserRepo with UserTableComponent {
     val m = filter.mobile_no.map(x => s"""'$x'""").getOrElse(s"""null""")
     val query = sql"""SELECT * from ptp_fn_find_user(#$e, #$m);"""
       .as[Option[String]]
-    db.run(query).map(_.map(_.map(r => get(r))).headOption.flatten).map {q =>
-      if (q.isEmpty) println(s"""database return empty $filter""")
-      q
-    }
+    db.run(query).map(_.map(_.map(r => get(r))).headOption.flatten)
 
   }
 
@@ -49,10 +46,7 @@ object UserRepoImpl extends UserRepo with UserTableComponent {
     val m = mobileNo.map(x => s"""'$x'""").getOrElse(s"""null""")
     val query = sql"""SELECT * from ptp_fn_find_user(#$e, #$m);"""
       .as[Option[String]]
-    db.run(query).map(_.map(_.map(r => get(r))).headOption.flatten).map {q =>
-      if (q.isEmpty) println(s"""database return empty $mobileNo $email """)
-      q
-    }
+    db.run(query).map(_.map(_.map(r => get(r))).headOption.flatten)
 
   }
 

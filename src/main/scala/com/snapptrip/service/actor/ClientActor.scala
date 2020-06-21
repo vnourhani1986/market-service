@@ -43,10 +43,16 @@ class ClientActor(
     case RegisterUser(user) =>
       userActorRef ! UserActor.RegisterUser(user, sender())
 
+    case LoginUser(user) =>
+      userActorRef ! UserActor.LoginUser(user, sender())
+
     case CheckUser(user) =>
-      userActorRef ! UserActor.RegisterUser(user, sender())
+      userActorRef ! UserActor.CheckUser(user, sender())
 
     case RegisterUserResult(result, ref) =>
+      ref ! result
+
+    case LoginUserResult(result, ref) =>
       ref ! result
 
     case CheckUserResult(result, ref) =>
@@ -71,9 +77,13 @@ object ClientActor {
 
   case class RegisterUser(userInfo: WebEngageUserInfo) extends Message
 
+  case class LoginUser(userInfo: WebEngageUserInfo) extends Message
+
   case class CheckUser(userInfo: WebEngageUserInfo) extends Message
 
-  case class RegisterUserResult(result: Either[Exception, String], ref: ActorRef)
+  case class RegisterUserResult(result: Either[ExtendedException, String], ref: ActorRef)
+
+  case class LoginUserResult(result: Either[ExtendedException, String], ref: ActorRef)
 
   case class CheckUserResult(result: Either[ExtendedException, String], ref: ActorRef)
 
@@ -87,6 +97,7 @@ object ClientActor {
       case _: CheckUser => 0
       case _: RegisterUser => 1
       case _: CheckUserResult => 2
+      case _: LoginUserResult => 3
       case _: RegisterUserResult => 3
       case _: TrackEvent => 4
       case _: PoisonPill => 6

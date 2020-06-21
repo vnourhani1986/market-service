@@ -53,7 +53,7 @@ class EventActor(
     case FindUser(user, event, ref) =>
       dbRouter ! Find(WebEngageUserInfo(mobile_no = user.mobile_no, email = user.email, provider = getProvider(event)), ref, Some(event))
 
-    case DBActor.FindResult(newUser: WebEngageUserInfo, oldUserOpt: Option[User], ref, eventOpt: Option[JsValue], fail) =>
+    case DBActor.FindResult(newUser: WebEngageUserInfo, oldUserOpt: Option[User], ref, eventOpt: Option[JsValue], fail, _) =>
       if(fail) {
 
       } else {
@@ -68,7 +68,7 @@ class EventActor(
         }
       }
 
-    case DBActor.UpdateResult(user: User, updated, ref, eventOpt: Option[JsValue]) =>
+    case DBActor.UpdateResult(user: User, updated, ref, eventOpt: Option[JsValue], _) =>
       if (updated) {
         val event = eventOpt.get
         val (userId, modifiedEvent) = modifyEvent(user.userId, event) match {
@@ -85,7 +85,7 @@ class EventActor(
         self ! SendToKafka(Key(userId, "track-event"), modifiedEvent)
       }
 
-    case DBActor.SaveResult(user: User, ref, eventOpt: Option[JsValue], fail) =>
+    case DBActor.SaveResult(user: User, ref, eventOpt: Option[JsValue], fail, _) =>
       if (fail) {
 
       } else {

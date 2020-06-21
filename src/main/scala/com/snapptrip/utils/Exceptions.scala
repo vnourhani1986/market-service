@@ -19,6 +19,8 @@ object Exceptions {
     val RestServiceError = 5012
     val JsonParseError = 4011
     val TimeFormatError = 4012
+    val UserAlreadyExistError = 4013
+    val UserIsNotExistError = 4014
     val DatabaseQueryError = 5012
     val InternalSeverError = 5000
   }
