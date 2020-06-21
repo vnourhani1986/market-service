@@ -81,7 +81,6 @@ deploy_beta:
         url: http://b2c.ptp
     only:
         - beta
-
 deploy_master_pars:
     stage: deploy
     retry: 2
