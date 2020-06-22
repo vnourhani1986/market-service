@@ -56,7 +56,7 @@ class UserActor(
     case FindUser(user, ref, command) =>
       dbRouter ! Find(user, ref, command = command)
 
-    case DBActor.FindResult(newUser: WebEngageUserInfo, oldUserOpt: Option[User], ref, _, fail, command) =>
+    case DBActor.FindResult(webEngageUserInfo: WebEngageUserInfo, oldUserOpt: Option[User], ref, _, fail, command) =>
       if (fail) {
         command match {
           case c if c.isLeft => clientActor ! RegisterUserResult(Left(ExtendedException("can not query data in database",
@@ -71,27 +71,27 @@ class UserActor(
           case (Some(_), c) if c.isLeft =>
             clientActor ! RegisterUserResult(Left(ExtendedException("user already exist", ErrorCodes.UserAlreadyExistError)), ref)
           case (userOpt: Some[User], _) =>
-            val user = converter(newUser, userOpt)
-            dbRouter ! Update(user, ref)
+            val user = webEngageUserInfoToUser(webEngageUserInfo, userOpt)
+            dbRouter ! Update(user, ref, meta = Option(webEngageUserInfo))
           case (None, c) if c.isRight =>
             clientActor ! LoginUserResult(Left(ExtendedException("user does not exist", ErrorCodes.UserIsNotExistError)), ref)
           case (None, _) =>
             val newUserId = UUID.randomUUID().toString
-            val user = converter(newUser, newUserId)
-            dbRouter ! Save(newUser, user, ref, command = command)
+            val user = webEngageUserInfoToUser(webEngageUserInfo, newUserId)
+            dbRouter ! Save(webEngageUserInfo, user, ref, meta = Option(webEngageUserInfo), command = command)
         }
       }
 
-    case DBActor.UpdateResult(user: User, updated, ref, _, command) =>
+    case DBActor.UpdateResult(user: User, updated, ref, webEngageUserInfo: Option[WebEngageUserInfo], command) =>
       val result = if (updated) {
         val birthDate = user.birthDate.map(b => dateTimeFormatter(
           b, DateTimeFormatter.ISO_LOCAL_DATE_TIME, Some(WebEngageConfig.timeOffset)) match {
           case Right(value) => value
           case Left(exception) => throw ExtendedException(exception.getMessage, ErrorCodes.TimeFormatError, ref)
         })
-        val wUser = converter(user, birthDate)
-        self ! SendToKafka(Key(wUser.userId.get, "track-user"), wUser.toJson)
-        Right(wUser.userId.get)
+        val wUser = webEngageUserInfoToWebEngageUserInfoWithId(userId = Some(user.userId), webEngageUserInfo = webEngageUserInfo.get, birthDate = birthDate)
+        self ! SendToKafka(Key(user.userId, "track-user"), wUser.toJson)
+        Right(user.userId)
       } else {
         Left(ExtendedException("can not update user data in database", ErrorCodes.DatabaseQueryError))
       }
@@ -101,7 +101,7 @@ class UserActor(
       }
 
 
-    case DBActor.SaveResult(user: User, ref, _, fail, command) =>
+    case DBActor.SaveResult(user: User, ref, webEngageUserInfo: Option[WebEngageUserInfo], fail, command) =>
       if (fail) {
         command match {
           case c if c.isLeft => clientActor ! RegisterUserResult(Left(ExtendedException("can not save user data in database",
@@ -115,8 +115,8 @@ class UserActor(
           case Right(value) => value
           case Left(exception) => throw ExtendedException(exception.getMessage, ErrorCodes.TimeFormatError, ref)
         })
-        val wUser = converter(user, birthDate)
-        self ! SendToKafka(Key(wUser.userId.get, "track-user"), wUser.toJson)
+        val wUser = webEngageUserInfoToWebEngageUserInfoWithId(userId = Some(user.userId), webEngageUserInfo = webEngageUserInfo.get, birthDate = birthDate)
+        self ! SendToKafka(Key(user.userId, "track-user"), wUser.toJson)
         command match {
           case c if c.isLeft => clientActor ! RegisterUserResult(Right(wUser.userId.get), ref)
           case c if c.isBoth => clientActor ! CheckUserResult(Right(wUser.userId.get), ref)

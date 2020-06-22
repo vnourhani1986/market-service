@@ -53,18 +53,18 @@ class EventActor(
     case FindUser(user, event, ref) =>
       dbRouter ! Find(WebEngageUserInfo(mobile_no = user.mobile_no, email = user.email, provider = getProvider(event)), ref, Some(event))
 
-    case DBActor.FindResult(newUser: WebEngageUserInfo, oldUserOpt: Option[User], ref, eventOpt: Option[JsValue], fail, _) =>
+    case DBActor.FindResult(webEngageUserInfo: WebEngageUserInfo, oldUserOpt: Option[User], ref, eventOpt: Option[JsValue], fail, _) =>
       if(fail) {
 
       } else {
         oldUserOpt match {
           case userOpt: Some[User] =>
-            val user = converter(newUser, userOpt)
+            val user = webEngageUserInfoToUser(webEngageUserInfo, userOpt)
             dbRouter ! Update(user, ref, eventOpt)
           case None =>
             val newUserId = UUID.randomUUID().toString
-            val user = converter(newUser, newUserId)
-            dbRouter ! Save(newUser, user, ref, eventOpt)
+            val user = webEngageUserInfoToUser(webEngageUserInfo, newUserId)
+            dbRouter ! Save(webEngageUserInfo, user, ref, eventOpt)
         }
       }
 
@@ -80,7 +80,7 @@ class EventActor(
           case Right(value) => value
           case Left(exception) => throw ExtendedException(exception.getMessage, ErrorCodes.TimeFormatError, ref)
         })
-        val wUser = converter(user, birthDate)
+        val wUser = UserToWebEngageUserInfoWithId(user, birthDate = birthDate)
         self ! SendToKafka(Key(userId, "track-user"), wUser.toJson)
         self ! SendToKafka(Key(userId, "track-event"), modifiedEvent)
       }
@@ -99,7 +99,7 @@ class EventActor(
           case Right(value) => value
           case Left(exception) => throw ExtendedException(exception.getMessage, ErrorCodes.TimeFormatError, ref)
         })
-        val wUser = converter(user, birthDate)
+        val wUser = UserToWebEngageUserInfoWithId(user, birthDate = birthDate)
         self ! SendToKafka(Key(userId, "track-user"), wUser.toJson)
         self ! SendToKafka(Key(userId, "track-event"), modifiedEvent)
       }

@@ -7,14 +7,16 @@ import com.snapptrip.api.Messages.{WebEngageUserInfo, WebEngageUserInfoWithUserI
 import com.snapptrip.models.User
 import com.snapptrip.utils.WebEngageConfig
 import com.snapptrip.utils.formatters.EmailFormatter
-import com.typesafe.scalalogging.LazyLogging
 import spray.json.{JsObject, JsString, JsValue}
 
 import scala.util.Try
 
-trait Converter extends LazyLogging {
+trait Converter {
 
-  def converter(webEngageUserInfo: WebEngageUserInfo, newUserId: String): User = {
+  def webEngageUserInfoToUser(
+                               webEngageUserInfo: WebEngageUserInfo,
+                               newUserId: String
+                             ): User =
     User(
       userName = webEngageUserInfo.user_name,
       userId = newUserId,
@@ -27,9 +29,11 @@ trait Converter extends LazyLogging {
       gender = webEngageUserInfo.gender,
       provider = webEngageUserInfo.provider
     )
-  }
 
-  def converter(webEngageUserInfo: WebEngageUserInfo, oldUser: Option[User]): User = {
+  def webEngageUserInfoToUser(
+                               webEngageUserInfo: WebEngageUserInfo,
+                               oldUser: Option[User]
+                             ): User =
     User(
       id = oldUser.flatMap(_.id),
       userName = webEngageUserInfo.user_name.orElse(oldUser.get.userName),
@@ -43,9 +47,36 @@ trait Converter extends LazyLogging {
       gender = webEngageUserInfo.gender.orElse(oldUser.get.gender),
       provider = webEngageUserInfo.provider.orElse(oldUser.get.provider)
     )
-  }
 
-  def converter(user: User, birthDate: Option[String]): WebEngageUserInfoWithUserId = {
+  def webEngageUserInfoToWebEngageUserInfoWithId(
+                                                  userId: Option[String] = None,
+                                                  anonymousId: Option[String] = None,
+                                                  webEngageUserInfo: WebEngageUserInfo,
+                                                  birthDate: Option[String]
+                                                ): WebEngageUserInfoWithUserId =
+    WebEngageUserInfoWithUserId(
+      userId = userId,
+      firstName = webEngageUserInfo.name,
+      lastName = webEngageUserInfo.family,
+      email = webEngageUserInfo.email,
+      phone = webEngageUserInfo.mobile_no,
+      birthDate = birthDate,
+      gender = webEngageUserInfo.gender,
+      anonymousId = anonymousId,
+      emailOptIn = webEngageUserInfo.email_opt_in,
+      smsOptIn = webEngageUserInfo.sms_opt_in,
+      whatsappOptIn = webEngageUserInfo.whatsapp_opt_in,
+      company = webEngageUserInfo.company,
+      hashedEmail = webEngageUserInfo.hashed_email,
+      hashedPhone = webEngageUserInfo.hashed_phone,
+      attributes = webEngageUserInfo.attributes
+    )
+
+  def UserToWebEngageUserInfoWithId(
+                                     user: User,
+                                     anonymousId: Option[String] = None,
+                                     birthDate: Option[String]
+                                   ): WebEngageUserInfoWithUserId =
     WebEngageUserInfoWithUserId(
       userId = Some(user.userId),
       firstName = user.name,
@@ -53,9 +84,9 @@ trait Converter extends LazyLogging {
       email = user.email,
       phone = user.mobileNo,
       birthDate = birthDate,
-      gender = user.gender
+      gender = user.gender,
+      anonymousId = anonymousId
     )
-  }
 
   def dateTimeFormatter[D]: PartialFunction[(D, DateTimeFormatter, Option[String]), Either[Throwable, String]] = {
     case (d: LocalDate, format, offset) =>
