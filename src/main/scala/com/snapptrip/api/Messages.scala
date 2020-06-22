@@ -32,17 +32,33 @@ object Messages {
                                 mobile_no: Option[String] = None,
                                 birth_date: Option[LocalDate] = None,
                                 gender: Option[String] = None,
-                                provider: Option[String] = None
+                                provider: Option[String] = None,
+                                anonymous_id: Option[String] = None,
+                                email_opt_in: Option[Boolean] = None,
+                                sms_opt_in: Option[Boolean] = None,
+                                whatsapp_opt_in: Option[Boolean] = None,
+                                company: Option[String] = None,
+                                hashed_email: Option[String] = None,
+                                hashed_phone: Option[String] = None,
+                                attributes: Option[JsValue] = None
                               )
 
   case class WebEngageUserInfoWithUserId(
-                                          userId: String,
+                                          userId: Option[String],
+                                          anonymousId: Option[String] = None,
                                           firstName: Option[String] = None,
                                           lastName: Option[String] = None,
                                           email: Option[String] = None,
                                           phone: Option[String] = None,
                                           birthDate: Option[String] = None,
-                                          gender: Option[String] = None
+                                          gender: Option[String] = None,
+                                          emailOptIn: Option[Boolean] = None,
+                                          smsOptIn: Option[Boolean] = None,
+                                          whatsappOptIn: Option[Boolean] = None,
+                                          company: Option[String] = None,
+                                          hashedEmail: Option[String] = None,
+                                          hashedPhone: Option[String] = None,
+                                          attributes: Option[JsValue] = None
                                         )
 
   case class EventUserInfo(mobile_no: Option[String], email: Option[String])

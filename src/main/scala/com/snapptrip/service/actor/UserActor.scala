@@ -90,8 +90,8 @@ class UserActor(
           case Left(exception) => throw ExtendedException(exception.getMessage, ErrorCodes.TimeFormatError, ref)
         })
         val wUser = converter(user, birthDate)
-        self ! SendToKafka(Key(wUser.userId, "track-user"), wUser.toJson)
-        Right(wUser.userId)
+        self ! SendToKafka(Key(wUser.userId.get, "track-user"), wUser.toJson)
+        Right(wUser.userId.get)
       } else {
         Left(ExtendedException("can not update user data in database", ErrorCodes.DatabaseQueryError))
       }
@@ -116,10 +116,10 @@ class UserActor(
           case Left(exception) => throw ExtendedException(exception.getMessage, ErrorCodes.TimeFormatError, ref)
         })
         val wUser = converter(user, birthDate)
-        self ! SendToKafka(Key(wUser.userId, "track-user"), wUser.toJson)
+        self ! SendToKafka(Key(wUser.userId.get, "track-user"), wUser.toJson)
         command match {
-          case c if c.isLeft => clientActor ! RegisterUserResult(Right(wUser.userId), ref)
-          case c if c.isBoth => clientActor ! CheckUserResult(Right(wUser.userId), ref)
+          case c if c.isLeft => clientActor ! RegisterUserResult(Right(wUser.userId.get), ref)
+          case c if c.isBoth => clientActor ! CheckUserResult(Right(wUser.userId.get), ref)
         }
       }
 

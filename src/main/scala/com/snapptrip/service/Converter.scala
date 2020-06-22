@@ -47,7 +47,7 @@ trait Converter extends LazyLogging {
 
   def converter(user: User, birthDate: Option[String]): WebEngageUserInfoWithUserId = {
     WebEngageUserInfoWithUserId(
-      userId = user.userId,
+      userId = Some(user.userId),
       firstName = user.name,
       lastName = user.family,
       email = user.email,

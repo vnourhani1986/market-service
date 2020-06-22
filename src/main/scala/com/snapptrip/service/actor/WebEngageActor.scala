@@ -38,15 +38,15 @@ class WebEngageActor(
             self ! PoisonPill
 
           case (status, entity) if status == StatusCodes.BadRequest =>
-            errorPublisherActor ! (Key(user.userId, "track-user"), entity)
+            errorPublisherActor ! (Key(user.userId.get, "track-user"), entity)
             throw ExtendedException("bad request to webengage", ErrorCodes.BadRequestError)
 
           case (status, entity) if status == StatusCodes.Unauthorized =>
-            errorPublisherActor ! (Key(user.userId, "track-user"), entity)
+            errorPublisherActor ! (Key(user.userId.get, "track-user"), entity)
             throw ExtendedException("webengage authentication fail", ErrorCodes.AuthenticationError)
 
           case (status, entity) if status == StatusCodes.NotFound =>
-            errorPublisherActor ! (Key(user.userId, "track-user"), entity)
+            errorPublisherActor ! (Key(user.userId.get, "track-user"), entity)
             throw ExtendedException("route not found", ErrorCodes.InvalidURL)
 
         }.recover {
@@ -55,7 +55,7 @@ class WebEngageActor(
           if (retryCount < retryMax) {
             retry(user, (retryCount * retryStep).second, retryCount + 1)
           } else {
-            errorPublisherActor ! (Key(user.userId, "track-user"), JsString(error.getMessage))
+            errorPublisherActor ! (Key(user.userId.get, "track-user"), JsString(error.getMessage))
             throw ExtendedException(error.getMessage, ErrorCodes.RestServiceError)
           }
       }
