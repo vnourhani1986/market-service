@@ -6,7 +6,7 @@ import java.util.UUID
 
 import com.snapptrip.api.HealthCheckHandler.HealthCheckResponse
 import com.snapptrip.api.Messages._
-import com.snapptrip.kafka.Setting.Key
+import com.snapptrip.kafka.Setting.{DeleteCancelKey, Key}
 import com.snapptrip.models._
 import com.snapptrip.utils.Exceptions.HttpError
 import com.snapptrip.utils.MetaData
@@ -35,6 +35,7 @@ trait FormatsComponent extends JsonProtocol {
   implicit val eventUserInfoFormat = jsonFormat2(EventUserInfo)
   implicit val webEngageEventFormat = jsonFormat2(WebEngageEvent)
   implicit val keyFormat = jsonFormat2(Key)
+  implicit val deleteCancelKeyFormat = jsonFormat2(DeleteCancelKey)
   implicit val webEngageSubjectIdentitiesFormat = jsonFormat2(SubjectIdentities)
   implicit val webEngageOpengdprRequeststFormat = jsonFormat3(OpengdprRequests)
 

@@ -1,12 +1,12 @@
 package com.snapptrip.service.actor
 
-import akka.actor.SupervisorStrategy.{Escalate, Restart, Resume, Stop}
+import akka.actor.SupervisorStrategy.{Escalate, Restart, Stop}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props, _}
 import akka.util.Timeout
 import com.snapptrip.api.Messages.WebEngageUserInfoWithUserId
 import com.snapptrip.formats.Formats._
-import com.snapptrip.kafka.Setting.Key
-import com.snapptrip.service.actor.WebEngageActor.{SendEventInfo, SendUserInfo}
+import com.snapptrip.kafka.Setting.{DeleteCancelKey, Key}
+import com.snapptrip.service.actor.WebEngageActor.{SendCancelDeleteUser, SendDeleteUser, SendEventInfo, SendUserInfo}
 import com.snapptrip.utils.Exceptions.{ErrorCodes, ExtendedException}
 import com.typesafe.scalalogging.LazyLogging
 import spray.json.JsonParser
@@ -17,7 +17,8 @@ import scala.util.Try
 
 class SubscriberActor(
                        publisherActor: ActorRef,
-                       errorPublisherActor: ActorRef
+                       errorPublisherActor: ActorRef,
+                       deleteUserResultPublisherActor: ActorRef
                      )(
                        implicit
                        system: ActorSystem,
@@ -41,31 +42,46 @@ class SubscriberActor(
 
     case (key: String, value: String) =>
 
-      val (userId, keyType, user, event) = Try {
-        val userId = JsonParser(key).convertTo[Key].userId
+      val (keyId, keyType, entity) = Try {
+        val keyId = Try {
+          JsonParser(key).convertTo[Key].userId
+        }.toOption.orElse(
+          Try {
+            JsonParser(key).convertTo[DeleteCancelKey].requestId
+          }.toOption
+        ).get
         val keyType = JsonParser(key).convertTo[Key].keyType
-        val (user, event) = if (keyType == "track-user") {
-          (Some(JsonParser(value).convertTo[WebEngageUserInfoWithUserId]), None)
-        } else {
-          (None, Some(JsonParser(value)))
-        }
-        (userId, keyType, user, event)
+        (keyId, keyType, JsonParser(value))
       }.toEither match {
         case Right(v) => v
         case Left(exception) => throw ExtendedException(exception.getMessage, ErrorCodes.JsonParseError)
       }
 
       if (keyType == "track-user") {
-        if (context.child(s"webengage-actor-$userId").isDefined) {
-          context.child(s"webengage-actor-$userId").foreach(_ ! SendUserInfo(user.get, 1))
+        val user = entity.convertTo[WebEngageUserInfoWithUserId]
+        if (context.child(s"webengage-actor-$keyId").isDefined) {
+          context.child(s"webengage-actor-$keyId").foreach(_ ! SendUserInfo(user, 1))
         } else {
-          context.actorOf(WebEngageActor(publisherActor, errorPublisherActor), s"webengage-actor-$userId") ! SendUserInfo(user.get, 1)
+          context.actorOf(WebEngageActor(publisherActor, errorPublisherActor, deleteUserResultPublisherActor), s"webengage-actor-$keyId") ! SendUserInfo(user, 1)
         }
       } else if (keyType == "track-event") {
-        if (context.child(s"webengage-actor-$userId").isDefined) {
-          context.child(s"webengage-actor-$userId").foreach(_ ! SendEventInfo(userId, event.get, 1))
+        val event = entity
+        if (context.child(s"webengage-actor-$keyId").isDefined) {
+          context.child(s"webengage-actor-$keyId").foreach(_ ! SendEventInfo(keyId, event, 1))
         } else {
-          context.actorOf(WebEngageActor(publisherActor, errorPublisherActor), s"webengage-actor-$userId") ! SendEventInfo(userId, event.get, 1)
+          context.actorOf(WebEngageActor(publisherActor, errorPublisherActor, deleteUserResultPublisherActor), s"webengage-actor-$keyId") ! SendEventInfo(keyId, event, 1)
+        }
+      } else if (keyType == "delete-user") {
+        if (context.child(s"webengage-actor-$keyId").isDefined) {
+          context.child(s"webengage-actor-$keyId").foreach(_ ! SendDeleteUser(keyId, entity, 1))
+        } else {
+          context.actorOf(WebEngageActor(publisherActor, errorPublisherActor, deleteUserResultPublisherActor), s"webengage-actor-$keyId") ! SendDeleteUser(keyId, entity, 1)
+        }
+      } else if (keyType == "cancel-delete-user") {
+        if (context.child(s"webengage-actor-$keyId").isDefined) {
+          context.child(s"webengage-actor-$keyId").foreach(_ ! SendCancelDeleteUser(keyId, 1))
+        } else {
+          context.actorOf(WebEngageActor(publisherActor, errorPublisherActor, deleteUserResultPublisherActor), s"webengage-actor-$keyId") ! SendCancelDeleteUser(keyId, 1)
         }
       }
 
@@ -77,12 +93,13 @@ object SubscriberActor {
 
   def apply(
              publisherActor: ActorRef,
-             errorPublisherActor: ActorRef
+             errorPublisherActor: ActorRef,
+             deleteUserResultPublisherActor: ActorRef
            )(
              implicit
              system: ActorSystem,
              ec: ExecutionContext,
              timeout: Timeout
-           ): Props = Props(new SubscriberActor(publisherActor, errorPublisherActor))
+           ): Props = Props(new SubscriberActor(publisherActor, errorPublisherActor, deleteUserResultPublisherActor))
 
 }

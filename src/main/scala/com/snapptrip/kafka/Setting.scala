@@ -13,8 +13,10 @@ object Setting {
   val conf: Config = ConfigFactory.load()
   val topic: String = config.getString("kafka.topic")
   val errorTopic: String = config.getString("kafka.error-topic")
+  val deleteUserResultTopic: String = config.getString("kafka.delete-user-result-topic")
 
   case class Key(userId: String, keyType: String)
+  case class DeleteCancelKey(requestId: String, keyType: String)
 
   def bootstrapServers: String = conf.getString("kafka.bootstrap.servers")
 

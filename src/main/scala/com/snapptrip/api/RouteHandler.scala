@@ -19,6 +19,7 @@ import com.snapptrip.service.Converter
 import com.snapptrip.service.actor.ClientActor.{CheckUser, LoginUser, RegisterUser, TrackEvent}
 import com.snapptrip.service.api.WebEngageApi
 import com.snapptrip.utils.Exceptions.{ErrorCodes, ExtendedException}
+import com.snapptrip.utils.WebEngageConfig
 import com.snapptrip.utils.formatters.{EmailFormatter, MobileNoFormatter}
 import com.typesafe.scalalogging.LazyLogging
 import spray.json.{JsNumber, JsObject, JsString, JsValue}
@@ -52,7 +53,7 @@ class RouteHandler(
         post {
           headerValue(extractToken(token)) { _ =>
             entity(as[JsValue]) { body =>
-              onSuccess(WebEngageApi.trackUser(body)) {
+              onSuccess(WebEngageApi.post(body, WebEngageConfig.usersUrl)) {
                 case (status, entity) if status == StatusCodes.Created =>
                   val httpEntity = HttpEntity(ContentTypes.`application/json`, entity.compactPrint)
                   complete(HttpResponse(status = status).withEntity(httpEntity))

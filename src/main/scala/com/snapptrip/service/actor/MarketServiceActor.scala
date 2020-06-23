@@ -24,8 +24,9 @@ class MarketServiceActor(
 
   val publisherActor: ActorRef = Publisher(Setting.topic)
   val errorPublisherActor: ActorRef = Publisher(Setting.errorTopic)
+  val deleteUserResultPublisherActor: ActorRef = Publisher(Setting.deleteUserResultTopic)
   private val subscriberActorRef: ActorRef = context.actorOf(
-    SubscriberActor(publisherActor, errorPublisherActor)(system, ex, timeout), "subscriber-actor")
+    SubscriberActor(publisherActor, errorPublisherActor, deleteUserResultPublisherActor)(system, ex, timeout), "subscriber-actor")
   private val subscriber = Subscriber(Setting.topic, subscriberActorRef)
   private val dbActorRef: ActorRef = context.actorOf(FromConfig.props(DBActor[User, WebEngageUserInfo](UserRepoImpl))
     .withMailbox("mailbox.db-actor"), s"db-router")

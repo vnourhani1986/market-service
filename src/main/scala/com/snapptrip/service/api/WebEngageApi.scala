@@ -16,11 +16,11 @@ import scala.concurrent.Future
 
 object WebEngageApi extends LazyLogging {
 
-  def trackUser(request: JsValue): Future[(StatusCode, JsValue)] = {
+  def post(request: JsValue, url: String): Future[(StatusCode, JsValue)] = {
 
     for {
       body <- Marshal(request).to[RequestEntity]
-      request = HttpRequest(HttpMethods.POST, WebEngageConfig.usersUrl)
+      request = HttpRequest(HttpMethods.POST, url)
         .withHeaders(RawHeader("Authorization", WebEngageConfig.apiKey))
         .withEntity(body.withContentType(ContentTypes.`application/json`))
       connectionFlow = Http().outgoingConnectionHttps(WebEngageConfig.host, settings = WebEngageConfig.clientConnectionSettings)
@@ -31,13 +31,24 @@ object WebEngageApi extends LazyLogging {
     }
   }
 
-  def trackEvent(request: JsValue): Future[(StatusCode, JsValue)] = {
+  def get(url: String): Future[(StatusCode, JsValue)] = {
 
     for {
-      body <- Marshal(request).to[RequestEntity]
-      request = HttpRequest(HttpMethods.POST, WebEngageConfig.eventsUrl)
-        .withHeaders(RawHeader("Authorization", WebEngageConfig.apiKey))
-        .withEntity(body.withContentType(ContentTypes.`application/json`))
+      request <- Future.successful(HttpRequest(HttpMethods.GET, url)
+        .withHeaders(RawHeader("Authorization", WebEngageConfig.apiKey)))
+      connectionFlow = Http().outgoingConnectionHttps(WebEngageConfig.host, settings = WebEngageConfig.clientConnectionSettings)
+      (status, responseBody) <- Source.single(request).via(connectionFlow).runWith(Sink.head).map(x => (x.status, x.entity))
+      entity <- Unmarshal(responseBody).to[JsValue]
+    } yield {
+      (status, entity)
+    }
+  }
+
+  def delete(url: String): Future[(StatusCode, JsValue)] = {
+
+    for {
+      request <- Future.successful(HttpRequest(HttpMethods.DELETE, url)
+        .withHeaders(RawHeader("Authorization", WebEngageConfig.apiKey)))
       connectionFlow = Http().outgoingConnectionHttps(WebEngageConfig.host, settings = WebEngageConfig.clientConnectionSettings)
       (status, responseBody) <- Source.single(request).via(connectionFlow).runWith(Sink.head).map(x => (x.status, x.entity))
       entity <- Unmarshal(responseBody).to[JsValue]
