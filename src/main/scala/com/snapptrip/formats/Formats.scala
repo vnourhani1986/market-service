@@ -91,4 +91,14 @@ trait JsonProtocol extends DefaultJsonProtocol {
       }
     }
 
+  final implicit val stringFormatter: JsValue => String = {
+    case JsString(s) => s
+    case x => throw new RuntimeException(s"Unexpected type ${x.getClass.getName} when trying to parse attributes")
+  }
+
+  final implicit val booleanFormatter: JsValue => Boolean = {
+    case JsBoolean(b) => b
+    case x => throw new RuntimeException(s"Unexpected type ${x.getClass.getName} when trying to parse attributes")
+  }
+
 }
