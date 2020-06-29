@@ -7,7 +7,6 @@ import akka.kafka.scaladsl.{Committer, Consumer}
 import akka.kafka.{CommitterSettings, ConsumerSettings, Subscriptions}
 import akka.stream.scaladsl.{Keep, Sink}
 import com.snapptrip.DI._
-import com.snapptrip.kafka.Setting._
 
 import scala.collection.immutable
 import scala.concurrent.Future
@@ -48,10 +47,11 @@ object Subscriber {
 
   def apply(
              topic: String,
-             actorRef: ActorRef
+             actorRef: ActorRef,
+             setting: ConsumerSettings[String, String]
            )(
              implicit system: ActorSystem
-           ): Subscriber = new Subscriber(topic, actorRef, "complete", 1, CommitterSettings(system), consumerDefaults)
+           ): Subscriber = new Subscriber(topic, actorRef, "complete", 1, CommitterSettings(system), setting)
 
 
 }

@@ -11,7 +11,7 @@ import com.snapptrip.models.User
 import com.snapptrip.repos.UserRepoImpl
 import com.snapptrip.utils.Exceptions.{ErrorCodes, ExtendedException}
 import com.typesafe.scalalogging.LazyLogging
-
+import com.snapptrip.kafka.Setting._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
@@ -22,12 +22,13 @@ class MarketServiceActor(
                           timeout: Timeout
                         ) extends Actor with LazyLogging {
 
-  val publisherActor: ActorRef = Publisher(Setting.topic)
+  val publisherActor: ActorRef = Publisher(marketTopic)
   val errorPublisherActor: ActorRef = Publisher(Setting.errorTopic)
   val deleteUserResultPublisherActor: ActorRef = Publisher(Setting.deleteUserResultTopic)
   private val subscriberActorRef: ActorRef = context.actorOf(
     SubscriberActor(publisherActor, errorPublisherActor, deleteUserResultPublisherActor, clientActorRef)(system, ex, timeout), "subscriber-actor")
-  private val subscriber = Subscriber(Setting.topic, subscriberActorRef)
+  private val marketSubscriber = Subscriber(marketTopic, subscriberActorRef, setting = setConsumer(marketServer))
+  private val biSubscriber = Subscriber(attributesTopic, subscriberActorRef, setting = setConsumer(biServer, "market"))
   private val dbActorRef: ActorRef = context.actorOf(FromConfig.props(DBActor[User, WebEngageUserInfo](UserRepoImpl))
     .withMailbox("mailbox.db-actor"), s"db-router")
   lazy val clientActorRef: ActorRef = context.actorOf(ClientActor(dbActorRef, publisherActor)

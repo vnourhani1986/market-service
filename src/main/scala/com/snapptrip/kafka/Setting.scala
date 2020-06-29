@@ -11,24 +11,27 @@ import scala.language.postfixOps
 object Setting {
 
   val conf: Config = ConfigFactory.load()
-  val topic: String = config.getString("kafka.topic")
+  val marketTopic: String = config.getString("kafka.topic")
   val errorTopic: String = config.getString("kafka.error-topic")
   val deleteUserResultTopic: String = config.getString("kafka.delete-user-result-topic")
+  val attributesTopic: String = config.getString("kafka.attributes")
 
   case class Key(userId: String, keyType: String)
   case class DeleteCancelKey(requestId: String, keyType: String)
 
-  def bootstrapServers: String = conf.getString("kafka.bootstrap.servers")
+  def marketServer: String = conf.getString("kafka.bootstrap.market-server")
+  def biServer: String = conf.getString("kafka.bootstrap.bi-server")
 
-  println("the bootstrap kafka server ::::: " + bootstrapServers)
+  println("the bootstrap kafka market server ::::: " + marketServer)
+  println("the bootstrap kafka bi server ::::: " + biServer)
 
-  lazy val producerDefaults: ProducerSettings[String, String] =
+  def setProducer(kafkaServers: String): ProducerSettings[String, String] =
     ProducerSettings(system, new StringSerializer, new StringSerializer)
-      .withBootstrapServers(bootstrapServers)
+      .withBootstrapServers(kafkaServers)
 
-  val consumerDefaults: ConsumerSettings[String, String] = ConsumerSettings(system, new StringDeserializer, new StringDeserializer)
-    .withBootstrapServers(bootstrapServers)
+  def setConsumer(kafkaServers: String, groupId: String = "group1"): ConsumerSettings[String, String] = ConsumerSettings(system, new StringDeserializer, new StringDeserializer)
+    .withBootstrapServers(kafkaServers)
     .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
-    .withGroupId("group1")
+    .withGroupId(groupId)
 
 }

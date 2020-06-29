@@ -33,7 +33,7 @@ object Publisher {
     bufferSize,
     OverflowStrategy.dropHead,
     topic,
-    producerDefaults).actorRef
+    setProducer(marketServer)).actorRef
 
   val bufferSize = 0
 
