@@ -139,20 +139,20 @@ object SubscriberActor {
       hashed_email = jsonFields.get("hashed_email"),
       hashed_phone = jsonFields.get("hashed_phone"),
       attributes = Option(jsonFields.filterKeys(attribute =>
-        attribute != "user_name" ||
-          attribute != "first_name" ||
-          attribute != "last_name" ||
-          attribute != "email" ||
-          attribute != "mobile" ||
-          attribute != "birth_date" ||
-          attribute != "gender" ||
-          attribute != "provider" ||
-          attribute != "anonymous_id" ||
-          attribute != "email_opt_in" ||
-          attribute != "sms_opt_in" ||
-          attribute != "whatsapp_opt_in" ||
-          attribute != "company" ||
-          attribute != "hashed_email" ||
+        attribute != "user_name" &&
+          attribute != "first_name" &&
+          attribute != "last_name" &&
+          attribute != "email" &&
+          attribute != "mobile" &&
+          attribute != "birth_date" &&
+          attribute != "gender" &&
+          attribute != "provider" &&
+          attribute != "anonymous_id" &&
+          attribute != "email_opt_in" &&
+          attribute != "sms_opt_in" &&
+          attribute != "whatsapp_opt_in" &&
+          attribute != "company" &&
+          attribute != "hashed_email" &&
           attribute != "hashed_phone"
       ).toJson)
     )

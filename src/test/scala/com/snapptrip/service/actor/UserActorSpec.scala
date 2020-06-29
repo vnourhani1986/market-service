@@ -5,15 +5,14 @@ import java.time.LocalDate
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import com.snapptrip.api.Messages.{WebEngageUserInfo, WebEngageUserInfoWithUserId}
+import com.snapptrip.formats.Formats._
 import com.snapptrip.kafka.Setting.Key
 import com.snapptrip.models.User
 import com.snapptrip.service.actor.ClientActor.CheckUserResult
 import com.snapptrip.service.actor.DBActor._
-import com.snapptrip.service.actor.UserActor
 import com.snapptrip.service.actor.UserActor.RegisterUser
 import org.scalatest.{MustMatchers, WordSpecLike}
 import spray.json._
-import com.snapptrip.formats.Formats._
 
 import scala.util.Random
 
@@ -59,16 +58,16 @@ class UserActorSpec extends TestKit(ActorSystem("test-system"))
         lastName = user.family,
         firstName = user.name,
         birthDate = Some("2020-03-10T00:00:00+0430"),
-        userId = user.userId,
+        userId = Some(user.userId),
         phone = user.mobileNo,
         gender = user.gender,
       ).toJson
 
       val dbActor: ActorRef = system.actorOf(Props(new Actor {
         override def receive: Receive = {
-          case Find(userInfo: WebEngageUserInfo, ref, meta) => sender() ! FindResult(userInfo, Some(user), ref, meta)
-          case Save(userInfo: WebEngageUserInfo, user: User, ref, meta) => sender() ! SaveResult(user, ref, meta)
-          case Update(user: User, ref, meta) => sender() ! UpdateResult(user, updated = true, ref, meta)
+          case Find(userInfo: WebEngageUserInfo, ref, meta, _) => sender() ! FindResult(userInfo, Some(user), ref, meta)
+          case Save(userInfo: WebEngageUserInfo, user: User, ref, meta, _) => sender() ! SaveResult(user, ref, meta)
+          case Update(user: User, ref, meta, _) => sender() ! UpdateResult(user, updated = true, ref, meta)
         }
       }),
         s"""db-actor-${Random.nextInt}""")
@@ -123,16 +122,16 @@ class UserActorSpec extends TestKit(ActorSystem("test-system"))
         lastName = user.family,
         firstName = user.name,
         birthDate = Some("2020-03-10T00:00:00+0430"),
-        userId = user.userId,
+        userId = Some(user.userId),
         phone = user.mobileNo,
         gender = user.gender,
       ).toJson
 
       val dbActor: ActorRef = system.actorOf(Props(new Actor {
         override def receive: Receive = {
-          case Find(userInfo: WebEngageUserInfo, ref, meta) => sender() ! FindResult(userInfo, Some(user), ref, meta)
-          case Save(userInfo: WebEngageUserInfo, user: User, ref, meta) => sender() ! SaveResult(user, ref, meta)
-          case Update(user: User, ref, meta) => sender() ! UpdateResult(user, updated = true, ref, meta)
+          case Find(userInfo: WebEngageUserInfo, ref, meta, _) => sender() ! FindResult(userInfo, Some(user), ref, meta)
+          case Save(userInfo: WebEngageUserInfo, user: User, ref, meta, _) => sender() ! SaveResult(user, ref, meta)
+          case Update(user: User, ref, meta, _) => sender() ! UpdateResult(user, updated = true, ref, meta)
         }
       }),
         s"""db-actor-${Random.nextInt}""")

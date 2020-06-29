@@ -42,7 +42,7 @@ class KafkaSpec extends TestKit(ActorSystem("test-system"))
 
       val topic = s"""test-${Random.nextInt}"""
 
-      Subscriber(topic, testActor)
+      Subscriber(topic, testActor, setting = Setting.setConsumer(Setting.marketServer))
       val actor = Publisher(topic)
 
       actor ! (key, value)

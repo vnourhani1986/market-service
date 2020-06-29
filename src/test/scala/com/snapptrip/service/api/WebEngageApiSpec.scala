@@ -4,6 +4,7 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.testkit.{ImplicitSender, TestKit}
 import akka.util.Timeout
 import com.snapptrip.DI.{ec, system}
+import com.snapptrip.utils.WebEngageConfig
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import spray.json.JsonParser
 
@@ -58,7 +59,7 @@ class WebEngageApiSpec extends TestKit(system) with ImplicitSender
         }"""
 
       for {
-        userResponse <- WebEngageApi.trackUser(JsonParser(user))
+        userResponse <- WebEngageApi.post(JsonParser(user), WebEngageConfig.usersUrl)
 //        eventResponse <- WebEngageApi.trackEventWithoutUserId(JsonParser(event).convertTo[WebEngageEvent])
       } yield {
         assert(userResponse._1 == StatusCodes.OK ) // && eventResponse._1

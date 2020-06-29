@@ -28,10 +28,10 @@ class WebEngageActorSpec extends TestKit(ActorSystem("test-system"))
 
       implicit val executionContext: ExecutionContextExecutor = ExecutionContext.global
 
-      val actor = system.actorOf(WebEngageActor(testActor, testActor), s"webengage-actor-${Random.nextInt}")
+      val actor = system.actorOf(WebEngageActor(testActor, testActor, testActor), s"webengage-actor-${Random.nextInt}")
 
       val user = WebEngageUserInfoWithUserId(
-        userId = "c3df9e0a-9695-4b12-9e4f-b74b9d15438d",
+        userId = Some("c3df9e0a-9695-4b12-9e4f-b74b9d15438d"),
         firstName = Some("test"),
         lastName = Some("test"),
         email = Some("test@pintapin.com"),
