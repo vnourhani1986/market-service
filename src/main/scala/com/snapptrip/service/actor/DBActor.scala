@@ -1,7 +1,8 @@
 package com.snapptrip.service.actor
 
 import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props}
-import akka.dispatch.{ControlMessage, PriorityGenerator, UnboundedStablePriorityMailbox}
+import akka.dispatch.{PriorityGenerator, UnboundedStablePriorityMailbox}
+import com.snapptrip.api.Messages.WebEngageUserInfo
 import com.snapptrip.repos.Repo
 import com.snapptrip.utils.Exceptions.{ErrorCodes, ExtendedException}
 import com.typesafe.config.Config
@@ -20,6 +21,19 @@ class DBActor[A, F](
 
   override def receive(): Receive = {
 
+    case Find(f: WebEngageUserInfo, ref, meta, command) if f.mobile_no.isDefined =>
+      val senderRef = sender()
+      repo.find(f.mobile_no.get).map(r => senderRef ! FindResult(f, r, ref, meta, command = command))
+        .recover {
+          case error =>
+            logger.error("find user" + error.getMessage)
+            senderRef ! FindResult(f, None, ref, meta, fail = true, command = command)
+            Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref))
+        }
+
+    case Find(f: WebEngageUserInfo, ref, meta, command) if f.mobile_no.isEmpty =>
+      sender() ! FindResult(f, None, ref, meta, fail = true, command = command)
+
     case Find(f: F, ref, meta, command) =>
       val senderRef = sender()
       repo.find(f).map(r => senderRef ! FindResult(f, r, ref, meta, command = command))
@@ -36,7 +50,7 @@ class DBActor[A, F](
         .recoverWith {
           case error =>
             logger.error("save user" + error.getMessage)
-            repo.find(f).map{
+            repo.find(f).map {
               case Some(r) => senderRef ! SaveResult(r, ref, meta, command = command)
               case None => senderRef ! SaveResult(a, ref, meta, fail = true, command)
             }.flatMap(_ => Future.failed(ExtendedException(error.getMessage, ErrorCodes.DatabaseError, ref)))

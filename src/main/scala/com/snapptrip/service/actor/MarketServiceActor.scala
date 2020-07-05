@@ -12,10 +12,10 @@ import com.snapptrip.kafka.Setting._
 import com.snapptrip.kafka.{Publisher, Setting, Subscriber}
 import com.snapptrip.models.User
 import com.snapptrip.repos.UserRepoImpl
-import com.snapptrip.service.actor.ClientActor.{CheckUser, CheckUserResult}
+import com.snapptrip.service.actor.ClientActor.CheckUser
 import com.snapptrip.utils.Exceptions.{ErrorCodes, ExtendedException}
 import com.typesafe.scalalogging.LazyLogging
-import spray.json.{JsObject, JsString, JsonParser}
+import spray.json.{JsObject, JsString}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -37,8 +37,8 @@ class MarketServiceActor(
     Done
   })
   private val biSubscriber = Subscriber(userAttributesTopic, setting = setConsumer(biServer, consumerGroup))(key => key)((_, v) =>
-    (clientActorRef ? CheckUser(v)).mapTo[Either[ExtendedException, String]].map{
-      case Right(value) =>
+    (clientActorRef ? CheckUser(v)).mapTo[Either[ExtendedException, String]].map {
+      case Right(_) =>
         Done
       case Left(exception) =>
         errorPublisherActor ! (Key("bi", "check-user"), JsObject("data" -> JsString(v), "error" -> JsString(exception.message)))

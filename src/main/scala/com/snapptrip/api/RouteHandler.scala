@@ -316,8 +316,8 @@ object RouteHandler extends CORSHandler with Converter {
 
     if (!birthDateIsValid) {
       (false, "birth date is not valid")
-    } else if (email.isEmpty && mobileNo.isEmpty) {
-      (false, "one of the fields of mobile or email need to be defined")
+    } else if (mobileNo.isEmpty) {
+      (false, "mobile needs to be defined")
     }
     else if (email.nonEmpty && !isValidEmail && mobileNo.nonEmpty && !isValidMobile) {
       (false, "invalid Email and mobile number")

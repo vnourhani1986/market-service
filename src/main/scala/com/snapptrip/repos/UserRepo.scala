@@ -8,7 +8,6 @@ import com.snapptrip.api.Messages.WebEngageUserInfo
 import com.snapptrip.formats.Formats._
 import com.snapptrip.models.{User, UserDBFormat}
 import com.snapptrip.utils.PostgresProfiler.api._
-import com.snapptrip.utils.formatters.EmailFormatter
 import slick.lifted.ProvenShape
 import spray.json.JsonParser
 
@@ -19,6 +18,8 @@ trait UserRepo extends Repo[User, WebEngageUserInfo] {
   def find(filter: WebEngageUserInfo): Future[Option[User]]
 
   def find(mobileNo: Option[String], email: Option[String]): Future[Option[User]]
+
+  def find(mobileNo: String): Future[Option[User]]
 
   def save(user: User): Future[User]
 
@@ -47,6 +48,17 @@ object UserRepoImpl extends UserRepo with UserTableComponent {
     val query = sql"""SELECT * from ptp_fn_find_user(#$e, #$m);"""
       .as[Option[String]]
     db.run(query).map(_.map(_.map(r => get(r))).headOption.flatten)
+
+  }
+
+  def find(mobileNo: String): Future[Option[User]] = {
+
+    val query = userTable
+      .filter(_.mobileNo === mobileNo)
+      .sortBy(_.createdAt.desc.nullsLast)
+      .result
+      .headOption
+    db.run(query)
 
   }
 
