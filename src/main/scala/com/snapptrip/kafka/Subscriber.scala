@@ -1,7 +1,7 @@
 package com.snapptrip.kafka
 
 import akka.Done
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.ActorSystem
 import akka.kafka.scaladsl.Consumer.DrainingControl
 import akka.kafka.scaladsl.{Committer, Consumer}
 import akka.kafka.{CommitterSettings, ConsumerSettings, Subscriptions}
@@ -13,19 +13,21 @@ import scala.concurrent.Future
 
 class Subscriber(
                   topic: String,
-                  actorRef: ActorRef,
                   onCompleteMessage: String,
                   maxBatch: Int,
                   committerSetting: CommitterSettings,
                   setting: ConsumerSettings[String, String]
+                )(
+                  keyRecover: String => String
+                )(
+                  f: (String, String) => Future[Done]
                 ) {
-
 
   val control: DrainingControl[immutable.Seq[Done]] =
     Consumer
       .committableSource(setting, Subscriptions.topics(topic))
       .mapAsync(10) { msg =>
-        get(msg.record.key, msg.record.value).map { _ =>
+        f(keyRecover(msg.record.key), msg.record.value).map { _ =>
           msg.committableOffset
         }
       }
@@ -34,24 +36,20 @@ class Subscriber(
       .mapMaterializedValue(DrainingControl.apply)
       .run()
 
-  def get(key: String, value: String): Future[Done] = {
-    Future.successful {
-      actorRef ! (key, value)
-      Done
-    }
-  }
-
 }
 
 object Subscriber {
 
   def apply(
              topic: String,
-             actorRef: ActorRef,
              setting: ConsumerSettings[String, String]
            )(
+             keyRecover: String => String
+           )(
+             f: (String, String) => Future[Done]
+           )(
              implicit system: ActorSystem
-           ): Subscriber = new Subscriber(topic, actorRef, "complete", 1, CommitterSettings(system), setting)
+           ): Subscriber = new Subscriber(topic, "complete", 1, CommitterSettings(system), setting)(keyRecover)(f)
 
 
 }

@@ -1,19 +1,24 @@
 package com.snapptrip.service.actor
 
+import akka.Done
 import akka.actor.SupervisorStrategy.{Restart, Resume, Stop}
 import akka.actor.{Actor, ActorInitializationException, ActorKilledException, ActorRef, ActorSystem, OneForOneStrategy, Props, SupervisorStrategy}
+import akka.pattern.ask
 import akka.routing.FromConfig
 import akka.util.Timeout
 import com.snapptrip.DI._
 import com.snapptrip.api.Messages.WebEngageUserInfo
+import com.snapptrip.kafka.Setting._
 import com.snapptrip.kafka.{Publisher, Setting, Subscriber}
 import com.snapptrip.models.User
 import com.snapptrip.repos.UserRepoImpl
+import com.snapptrip.service.actor.ClientActor.{CheckUser, CheckUserResult}
 import com.snapptrip.utils.Exceptions.{ErrorCodes, ExtendedException}
 import com.typesafe.scalalogging.LazyLogging
-import com.snapptrip.kafka.Setting._
-import scala.concurrent.ExecutionContext
+import spray.json.{JsObject, JsString, JsonParser}
+
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
 class MarketServiceActor(
                           implicit
@@ -27,8 +32,23 @@ class MarketServiceActor(
   val deleteUserResultPublisherActor: ActorRef = Publisher(Setting.deleteUserResultTopic)
   private val subscriberActorRef: ActorRef = context.actorOf(
     SubscriberActor(publisherActor, errorPublisherActor, deleteUserResultPublisherActor, clientActorRef)(system, ex, timeout), "subscriber-actor")
-  private val marketSubscriber = Subscriber(marketTopic, subscriberActorRef, setting = setConsumer(marketServer))
-  private val biSubscriber = Subscriber(attributesTopic, subscriberActorRef, setting = setConsumer(biServer, "market"))
+  private val marketSubscriber = Subscriber(marketTopic, setting = setConsumer(marketServer))(key => key)((k, v) => Future {
+    subscriberActorRef ! (k, v)
+    Done
+  })
+  private val biSubscriber = Subscriber(userAttributesTopic, setting = setConsumer(biServer, consumerGroup))(key => key)((_, v) =>
+    (clientActorRef ? CheckUser(v)).mapTo[Either[ExtendedException, String]].map{
+      case Right(value) =>
+        Done
+      case Left(exception) =>
+        errorPublisherActor ! (Key("bi", "check-user"), JsObject("data" -> JsString(v), "error" -> JsString(exception.message)))
+        Done
+    }.recover {
+      case exception: Throwable =>
+        errorPublisherActor ! (Key("bi", "check-user"), JsObject("data" -> JsString(v), "error" -> JsString(exception.getMessage)))
+        Done
+    }
+  )
   private val dbActorRef: ActorRef = context.actorOf(FromConfig.props(DBActor[User, WebEngageUserInfo](UserRepoImpl))
     .withMailbox("mailbox.db-actor"), s"db-router")
   lazy val clientActorRef: ActorRef = context.actorOf(ClientActor(dbActorRef, publisherActor)
