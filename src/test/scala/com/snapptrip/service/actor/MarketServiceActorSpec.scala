@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import com.snapptrip.DI.{ec, timeout}
 import com.snapptrip.api.Messages.WebEngageUserInfo
-import com.snapptrip.service.actor.ClientActor.CheckUserResult
+import com.snapptrip.service.actor.ClientActor.RegisterUserResult
 import com.snapptrip.service.actor.UserActor.RegisterUser
 import org.scalatest.{MustMatchers, WordSpecLike}
 
@@ -24,7 +24,7 @@ class MarketServiceActorSpec extends TestKit(ActorSystem("test-system"))
         mobile_no = Some("9124497405")
       )
 
-      val result = CheckUserResult(
+      val result = RegisterUserResult(
         Right("9124497405"),
         endProb.ref
       )

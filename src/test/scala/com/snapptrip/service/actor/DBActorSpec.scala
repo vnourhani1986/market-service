@@ -28,7 +28,7 @@ class DBActorSpec extends TestKit(ActorSystem("test-system"))
       case class F()
 
       val repo = stub[Repo[A, F]]
-      (repo.find _).when(*).returns(Future.successful(Some(A())))
+      (repo.find(_: String)).when(*).returns(Future.successful(Some(A())))
 
       val actor = system.actorOf(DBActor(repo), s"""db-actor-${Random.nextInt}""")
 
@@ -70,7 +70,7 @@ class DBActorSpec extends TestKit(ActorSystem("test-system"))
       case class F()
 
       val repo = stub[Repo[A, F]]
-      (repo.find _).when(*).returns(Future.successful(Some(A())))
+      (repo.find(_: String)).when(*).returns(Future.successful(Some(A())))
       (repo.save _).when(*).returns(Future.successful(A()))
       (repo.update _).when(*).returns(Future.successful(true))
 

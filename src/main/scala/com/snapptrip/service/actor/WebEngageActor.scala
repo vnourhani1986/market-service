@@ -14,8 +14,8 @@ import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import spray.json._
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{FiniteDuration, _}
+import scala.concurrent.{ExecutionContext, Future}
 
 class WebEngageActor(
                       publisherActor: ActorRef,

@@ -5,12 +5,9 @@ import java.time.LocalDate
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import com.snapptrip.api.Messages.{EventUserInfo, WebEngageEvent, WebEngageUserInfo}
-import com.snapptrip.formats.Formats._
 import com.snapptrip.kafka.Setting.Key
 import com.snapptrip.models.User
-import com.snapptrip.service.actor.ClientActor.CheckUserResult
 import com.snapptrip.service.actor.DBActor._
-import com.snapptrip.service.actor.EventActor
 import com.snapptrip.service.actor.EventActor.TrackEvent
 import org.scalatest.{MustMatchers, WordSpecLike}
 import spray.json._
@@ -45,18 +42,12 @@ class EventActorSpec extends TestKit(ActorSystem("test-system"))
 
       val eventBody =
         s"""{
-          "user": {
-            "email": "test@pintapin.com",
-            "mobile_no": "9124497405"
-          },
-            "event": {
               "eventName":"Fulfilled",
               "eventTime":"2020-03-10T12:18:32",
               "eventData":{
                 "familyName":"test",
                 "provider": "hotel"
               }
-            }
           }""".stripMargin.parseJson
 
       val event = WebEngageEvent(
@@ -64,20 +55,30 @@ class EventActorSpec extends TestKit(ActorSystem("test-system"))
           mobile_no = Some("9124497405"),
           email = Some("test@pintapin.com")
         ),
-        eventBody.toJson
+        eventBody
       )
 
-      val kafkaValue =
+      val kafkaUserValue =
+        s"""{
+           |"email":"test@pintapin.com",
+           |"lastName":"test",
+           |"firstName":"test",
+           |"birthDate":"2020-03-10T00:00:00+0430",
+           |"userId":"9124497405",
+           |"phone":"9124497405",
+           |"gender":"male"
+           |}""".stripMargin.parseJson
+
+      val kafkaEventValue =
         s"""{
 	        "userId": "9124497405",
-	        "event": {
 	        		"eventName": "Fulfilled",
 	        		"eventTime": "2020-03-10T12:18:32+0430",
 	        		"eventData":{
                 "familyName":"test",
                 "provider": "hotel"
               }
-          }
+
         }""".stripMargin.parseJson
 
       val dbActor: ActorRef = system.actorOf(Props(new Actor {
@@ -99,7 +100,8 @@ class EventActorSpec extends TestKit(ActorSystem("test-system"))
       }))
 
       testActor ! TrackEvent(event, endProb.ref)
-      publisherProb.expectMsg((Key("9124497405", "track-event"), kafkaValue))
+      publisherProb.expectMsg((Key("9124497405", "track-user"), kafkaUserValue))
+      publisherProb.expectMsg((Key("9124497405", "track-event"), kafkaEventValue))
 
     }
 

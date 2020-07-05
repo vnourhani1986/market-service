@@ -100,6 +100,7 @@ class EventActor(
           case Left(exception) => throw ExtendedException(exception.getMessage, ErrorCodes.TimeFormatError, ref)
         })
         val wUser = UserToWebEngageUserInfoWithId(user, birthDate = birthDate)
+
         self ! SendToKafka(Key(userId, "track-user"), wUser.toJson)
         self ! SendToKafka(Key(userId, "track-event"), modifiedEvent)
       }

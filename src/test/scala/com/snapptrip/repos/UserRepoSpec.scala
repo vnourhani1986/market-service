@@ -22,8 +22,8 @@ class UserRepoSpec
     val userId1 = "1234567891"
     val userId2 = "1234567892"
     val userId3 = "1234567893"
-    val email = "test1@test.ir"
-    val mobileNo = "9121111113"
+    val email = "test111@test.ir"
+    val mobileNo = "9121111114"
 
     val result = for {
       // phase 1
