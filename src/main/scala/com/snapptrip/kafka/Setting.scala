@@ -14,7 +14,7 @@ object Setting {
   val marketTopic: String = config.getString("kafka.topic")
   val errorTopic: String = config.getString("kafka.error-topic")
   val deleteUserResultTopic: String = config.getString("kafka.delete-user-result-topic")
-  val userAttributesTopic: String = config.getString("kafka.user-attributes")
+  val userAttributesTopic: String = config.getString("kafka.user-attributes-topic")
   val consumerGroup: String = config.getString("kafka.consumer-group")
 
   case class Key(userId: String, keyType: String)

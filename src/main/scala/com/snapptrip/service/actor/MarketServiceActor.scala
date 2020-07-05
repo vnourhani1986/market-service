@@ -32,7 +32,7 @@ class MarketServiceActor(
   val deleteUserResultPublisherActor: ActorRef = Publisher(Setting.deleteUserResultTopic)
   private val subscriberActorRef: ActorRef = context.actorOf(
     SubscriberActor(publisherActor, errorPublisherActor, deleteUserResultPublisherActor, clientActorRef)(system, ex, timeout), "subscriber-actor")
-  private val marketSubscriber = Subscriber(marketTopic, setting = setConsumer(marketServer))(key => key)((k, v) => Future {
+  private val marketSubscriber = Subscriber(marketTopic, setting = setConsumer(marketServer, consumerGroup))(key => key)((k, v) => Future {
     subscriberActorRef ! (k, v)
     Done
   })
