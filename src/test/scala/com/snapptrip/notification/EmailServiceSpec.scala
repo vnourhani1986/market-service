@@ -67,18 +67,18 @@ class EmailServiceSpec
           "version": "1.0"
         }"""
 
-
-      val body = JsonParser(bodyJson).convertTo[WebEngageEmailBody]
-
-      for {
-        status <- EmailService.sendEmail(body.email.subject,
-          body.email.text,
-          body.email.recipients.to.head.email,
-          body.email.fromName,
-          None)
-      } yield {
+//
+//      val body = JsonParser(bodyJson).convertTo[WebEngageEmailBody]
+//
+//      for {
+//        status <- EmailService.sendEmail(body.email.subject,
+//          body.email.text,
+//          body.email.recipients.to.head.email,
+//          body.email.fromName,
+//          None)
+//      } yield {
 //        assert(status == StatusCodes.OK)
-      }
+//      }
 
     }
 
