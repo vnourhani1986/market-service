@@ -2,11 +2,14 @@ package com.snapptrip.service.actor
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
-import com.snapptrip.DI.{ec, timeout}
+import akka.util.Timeout
 import com.snapptrip.api.Messages.WebEngageUserInfo
 import com.snapptrip.service.actor.ClientActor.RegisterUserResult
 import com.snapptrip.service.actor.UserActor.RegisterUser
 import org.scalatest.{MustMatchers, WordSpecLike}
+
+import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.duration._
 
 class MarketServiceActorSpec extends TestKit(ActorSystem("test-system"))
   with WordSpecLike
@@ -16,6 +19,9 @@ class MarketServiceActorSpec extends TestKit(ActorSystem("test-system"))
 
   "a market service actor " must {
     "register user " in {
+
+      implicit val executionContext: ExecutionContextExecutor = system.dispatcher
+      implicit val timeout: Timeout = Timeout(60 seconds)
 
       val endProb = TestProbe()
 

@@ -72,7 +72,7 @@ class UserActor(
             clientActor ! RegisterUserResult(Left(ExtendedException("user already exist", ErrorCodes.UserAlreadyExistError)), ref)
           case (userOpt: Some[User], _) =>
             val user = webEngageUserInfoToUser(webEngageUserInfo, userOpt)
-            dbRouter ! Update(user, ref, meta = Option(webEngageUserInfo))
+            dbRouter ! Update(user, ref, meta = Option(webEngageUserInfo), command = command)
           case (None, c) if c.isRight =>
             clientActor ! LoginUserResult(Left(ExtendedException("user does not exist", ErrorCodes.UserIsNotExistError)), ref)
           case (None, _) =>

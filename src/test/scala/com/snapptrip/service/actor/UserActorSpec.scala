@@ -8,9 +8,9 @@ import com.snapptrip.api.Messages.{WebEngageUserInfo, WebEngageUserInfoWithUserI
 import com.snapptrip.formats.Formats._
 import com.snapptrip.kafka.Setting.Key
 import com.snapptrip.models.User
-import com.snapptrip.service.actor.ClientActor.CheckUserResult
+import com.snapptrip.service.actor.ClientActor.{CheckUserResult, LoginUserResult, RegisterUserResult}
 import com.snapptrip.service.actor.DBActor._
-import com.snapptrip.service.actor.UserActor.RegisterUser
+import com.snapptrip.service.actor.UserActor.{LoginUser, RegisterUser}
 import org.scalatest.{MustMatchers, WordSpecLike}
 import spray.json._
 
@@ -23,7 +23,7 @@ class UserActorSpec extends TestKit(ActorSystem("test-system"))
   with StopSystemAfterAll {
 
   "a user actor " must {
-    "register user " in {
+    "login user " in {
 
       val endProb = TestProbe()
       val clientProb = TestProbe()
@@ -48,43 +48,40 @@ class UserActorSpec extends TestKit(ActorSystem("test-system"))
         mobile_no = Some("9124497405")
       )
 
-      val result = CheckUserResult(
+      val result = LoginUserResult(
         Right("9124497405"),
         endProb.ref
       )
 
       val kafkaValue = WebEngageUserInfoWithUserId(
         email = user.email,
-        lastName = user.family,
-        firstName = user.name,
         birthDate = Some("2020-03-10T00:00:00+0430"),
         userId = Some(user.userId),
-        phone = user.mobileNo,
-        gender = user.gender,
+        phone = user.mobileNo
       ).toJson
 
       val dbActor: ActorRef = system.actorOf(Props(new Actor {
         override def receive: Receive = {
-          case Find(userInfo: WebEngageUserInfo, ref, meta, _) => sender() ! FindResult(userInfo, Some(user), ref, meta)
-          case Save(userInfo: WebEngageUserInfo, user: User, ref, meta, _) => sender() ! SaveResult(user, ref, meta)
-          case Update(user: User, ref, meta, _) => sender() ! UpdateResult(user, updated = true, ref, meta)
+          case Find(userInfo: WebEngageUserInfo, ref, meta, _) => sender() ! FindResult(userInfo, Some(user), ref, meta, command = createCommand("login"))
+          case Save(userInfo: WebEngageUserInfo, user: User, ref, meta, _) => sender() ! SaveResult(user, ref, meta, command = createCommand("login"))
+          case Update(user: User, ref, meta, _) => sender() ! UpdateResult(user, updated = true, ref, meta, command = createCommand("login"))
         }
       }),
         s"""db-actor-${Random.nextInt}""")
 
-      val testActor = system.actorOf(Props(new Actor {
+      val actor = system.actorOf(Props(new Actor {
 
-        val userActor: ActorRef = context.actorOf(UserActor(dbActor, clientProb.ref, publisherProb.ref))
+        val userActor: ActorRef = context.actorOf(UserActor(dbActor, clientProb.ref, publisherProb.ref), s"user-actor-${Random.nextInt}")
 
         override def receive: Receive = {
-          case message: CheckUserResult => endProb.ref ! message
+          case message: LoginUserResult => endProb.ref ! message
           case message => userActor.forward(message)
         }
       }))
 
-      testActor ! RegisterUser(userInfo, endProb.ref)
-      endProb.expectMsg(result)
+      actor ! LoginUser(userInfo, endProb.ref)
       publisherProb.expectMsg((Key("9124497405", "track-user"), kafkaValue))
+      clientProb.expectMsg(result)
 
     }
     "check user " in {
@@ -119,12 +116,9 @@ class UserActorSpec extends TestKit(ActorSystem("test-system"))
 
       val kafkaValue = WebEngageUserInfoWithUserId(
         email = user.email,
-        lastName = user.family,
-        firstName = user.name,
         birthDate = Some("2020-03-10T00:00:00+0430"),
         userId = Some(user.userId),
         phone = user.mobileNo,
-        gender = user.gender,
       ).toJson
 
       val dbActor: ActorRef = system.actorOf(Props(new Actor {
@@ -147,8 +141,8 @@ class UserActorSpec extends TestKit(ActorSystem("test-system"))
       }))
 
       testActor ! RegisterUser(userInfo, endProb.ref)
-      endProb.expectMsg(result)
       publisherProb.expectMsg((Key("9124497405", "track-user"), kafkaValue))
+      clientProb.expectMsg(result)
 
     }
   }
