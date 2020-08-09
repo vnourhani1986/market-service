@@ -41,13 +41,16 @@ class ClientActor(
   override def receive(): Receive = {
 
     case RegisterUser(user) =>
-      userActorRef ! UserActor.RegisterUser(user, sender())
+//      userActorRef ! UserActor.RegisterUser(user, sender())
+        sender() ! Right(":(")
 
     case LoginUser(user) =>
-      userActorRef ! UserActor.LoginUser(user, sender())
+//      userActorRef ! UserActor.LoginUser(user, sender())
+      sender() ! Right(":(")
 
     case CheckUser(user) =>
-      userActorRef ! UserActor.CheckUser(user, sender())
+//      userActorRef ! UserActor.CheckUser(user, sender())
+      sender() ! Right(":(")
 
     case RegisterUserResult(result, ref) =>
       ref ! result
@@ -60,8 +63,9 @@ class ClientActor(
 
     case TrackEvent(event) =>
       val ref = sender()
-      eventActorRef ! EventActor.TrackEvent(event, null)
-      ref ! "Ok"
+//      eventActorRef ! EventActor.TrackEvent(event, null)
+//      ref ! "Ok"
+      ref ! ":("
 
   }
 
