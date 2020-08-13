@@ -78,7 +78,7 @@ deploy_beta:
         REPLICAS: 1
     environment:
         name: beta
-        url: http://b2c.ptp
+        url: http://localhost:9000
     only:
         - beta
 deploy_master_pars:
@@ -91,7 +91,7 @@ deploy_master_pars:
         REPLICAS: 2
     environment:
         name: production_ir
-        url: http://snapptrip.com
+        url: http://localhost:9000
     only:
         - master
 
@@ -107,7 +107,7 @@ deploy_master_shatel:
         REPLICAS: 2
     environment:
         name: production_shatel
-        url: http://pintapin.com
+        url: http://localhost:9000
     only:
         - master
 
